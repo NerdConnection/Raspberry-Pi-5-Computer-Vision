@@ -1,8 +1,8 @@
-**아키텍처**
+## 아키텍처
 ![11](https://github.com/NerdConnection/Raspberry-Pi-5-Computer-Vision/assets/100738404/c81884ac-9ef4-4d53-8410-bf1959fc274a)
 
 
-**예상흐름도**
+## 예상흐름도
 ![13](https://github.com/NerdConnection/Raspberry-Pi-5-Computer-Vision/assets/100738404/5cbd5bd5-2f05-4e8f-877d-49814d30c45e)
 
 1. 사용자가 특정한 AI Computer Vision (CV) 모델을 선택하여 Raspberry Pi(RPi)에서 이미지 분석을 요청합니다.
