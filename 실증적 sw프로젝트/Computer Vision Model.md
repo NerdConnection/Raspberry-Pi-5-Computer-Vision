@@ -8,7 +8,7 @@
 ### 2. Object Detection Models
 목적: 이미지 내 객체의 위치 식별 및 분류 <br/>
 예시 모델: YOLO (You Only Look Once), SSD (Single Shot MultiBox Detector), Faster R-CNN <br/>
-설명: 이 모델들은 실시간 객체 검출에 유용하며, 다양한 객체를 빠르고 정확하게 식별
+설명: 실시간 객체 검출에 유용하며, 다양한 객체를 빠르고 정확하게 식별
 
 ### 3. Semantic Segmentation Models
 목적: 이미지 내의 각 픽셀이 어떤 객체에 속하는지 분류 <br/>
