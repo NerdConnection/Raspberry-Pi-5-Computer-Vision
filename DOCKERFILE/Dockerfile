@@ -25,6 +25,7 @@ RUN apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 
+
 # Copy the requirements file
 COPY requirements.txt .
 
@@ -32,7 +33,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the Python files
-COPY pi_camera_in_docker /app/camera_capture
+COPY camera_capture /app/camera_capture
 
 # Set the entry point
 CMD ["python3", "/app/camera_capture/main.py"]
