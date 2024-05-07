@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  camera:
+    image: camera:latest  # 컨테이너에 사용할 이미지 설정
+    # build: 
+    #   context: . 
+    #   dockerfile: Dockerfile  
+    container_name: test_camera  # 컨테이너의 이름 설정
+    volumes:
+      - /run/udev:/run/udev:ro  # 호스트의 /run/udev 디렉토리를 컨테이너 내부의 /run/udev로 읽기 전용으로 마운트
+      - ./imgs:/app/processed_images  # 호스트의 ./imgs 디렉토리를 컨테이너 내부의 /app/processed_images로 마운트
+    restart: always  # 컨테이너가 종료될 경우 항상 재시작
+    privileged: true  
+  yolov5:
+    image: ultralytics/yolov5:latest-arm64  # 컨테이너에 사용할 이미지 설정
+    container_name: test_yolov5  # 컨테이너의 이름 설정
+    ipc: host  # 호스트의 IPC 네임스페이스를 컨테이너와 공유 
+    tty: true  # TTY(터미널) 할당 t
+    stdin_open: true  # 표준 입력을 열어 둠 i
+    volumes:
+      - ./imgs:/usr/src/app/data  # 호스트의 ./imgs 디렉토리를 컨테이너 내부의 /usr/src/app/data로 마운트
