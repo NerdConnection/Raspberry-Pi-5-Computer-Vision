@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  camera:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ./local_images:/app/local_images
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=$DISPLAY
+    ports:
+      - "8000:8000"
+    privileged: true
