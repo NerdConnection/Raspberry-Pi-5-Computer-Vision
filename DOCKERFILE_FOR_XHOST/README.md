@@ -1,16 +1,5 @@
-# 컨테이너 내부 GUI 사용 및 이미지 확인 
-![image](https://github.com/NerdConnection/Raspberry-Pi-5-Computer-Vision/assets/100738404/71ae4cec-59a4-4a0a-91d3-ce68ca23daa0)
+# How to manage docker and run main.py
 
+1. set your point to DOCKERFILE folder to use ["cd DOCKERFILE"]
+2. "docker-compose up --build" to build image and run main.py
 
-### 개요
-
-현재 도커 컨테이너 내부에서 picamera를 사용하여 이미지를 촬영하는 작업까지 진행됨   
-촬영된 이미지를 컨테이너 내부에서 촬영된 이미지를 확인할 수 없는 상황   
-그래서 촬영한 이미지를 컨테이너에서 로컬로 가져와 이미지를 확인하고 있고   
-딥러닝 또는 영상처리 코드를 작성할 때 컨테이너 내부에서 이미지를 확인해야할 경우 리눅스의 x 윈도우가 필요함
-
-
-### 문제
-현재 상황에서는 도커 컨테이너 내부에서 촬영된 이미지를 확인할 수 없는데,  
-이는 리눅스와 유닉스 계열에서 기본적으로 GUI 환경을 제공하지 않기 때문   
-해결을 위해 x 윈도우를 활용하여 로컬 환경의 GUI를 컨테이너 내부에서 사용할 수 있도록 설정해야 함
