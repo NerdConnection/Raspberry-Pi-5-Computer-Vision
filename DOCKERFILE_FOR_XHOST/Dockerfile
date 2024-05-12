@@ -45,10 +45,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the Python files
 COPY camera_capture /app/camera_capture
 
-RUN mkdir -p /app/local_images
-
-# Install OpenCV using pip
-RUN pip install opencv-python
-
 # Set the entry point
 CMD ["python3", "/app/camera_capture/main.py"]
