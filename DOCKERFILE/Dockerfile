@@ -1,5 +1,15 @@
 FROM debian:bullseye
 
+# Install basic packages including X11
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gnupg \
+    curl \
+    ca-certificates \
+    xauth \
+    x11-apps \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg curl ca-certificates
 
 # Add Raspberry Pi archive signing key
@@ -10,21 +20,21 @@ RUN echo 'deb [signed-by=/usr/share/keyrings/raspi-archive-keyring.gpg] http://a
 
 RUN apt-get update && apt-get -y upgrade
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-pip \
         python3-picamera2 \
+        libopencv-dev \
     && apt-get clean \
     && apt-get autoremove \
     && rm -rf /var/cache/apt/archives/* \
     && rm -rf /var/lib/apt/lists/*
+
 
 # ------------------------------------------------------------------------------------------------
 # Build and run application
 # ------------------------------------------------------------------------------------------------
 # Set the working directory
 WORKDIR /app
-
-
 
 # Copy the requirements file
 COPY requirements.txt .
@@ -34,6 +44,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the Python files
 COPY camera_capture /app/camera_capture
+
+
+RUN mkdir -p /app/local_images
 
 # Set the entry point
 CMD ["python3", "/app/camera_capture/main.py"]
