@@ -1,1 +1,2 @@
-opencv-python
+opencv-python==4.9.0.80
+tflite-support==0.4.0
