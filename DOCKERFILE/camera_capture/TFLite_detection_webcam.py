@@ -22,42 +22,50 @@ import sys
 import time
 from threading import Thread
 import importlib.util
-from picamera2.picamera2 import Picamera2
-from picamera2.outputs import BufferOutput
 
-# Define VideoStream class to handle streaming of video from Picamera2 in separate processing thread
+from picamera2 import Picamera2, Preview
+from threading import Thread
+import cv2
+
 class VideoStream:
     """Camera object that controls video streaming from the Picamera2"""
     def __init__(self, resolution=(640, 480), framerate=30):
-        self.picamera2 = Picamera2()
-        self.picamera2_config = self.picamera2.create_preview_configuration()
-        self.picamera2_config['main']['size'] = resolution
-        self.picamera2.configure(self.picamera2_config)
+        # Initialize the Picamera2 and the camera image stream
+        self.picam2 = Picamera2()
+        self.picam2.configure(self.picam2.create_preview_configuration(main={"size": resolution, "format": "RGB888"}))
+        self.picam2.start()
         
-        self.output = BufferOutput()
-        self.picamera2.start_preview()
-        self.picamera2.start()
+        # Read the first frame from the stream
+        self.frame = self.picam2.capture_array()
+        
+        # Variable to control when the camera is stopped
         self.stopped = False
 
     def start(self):
+        # Start the thread that reads frames from the video stream
         Thread(target=self.update, args=()).start()
         return self
 
     def update(self):
+        # Keep looping indefinitely until the thread is stopped
         while True:
+            # If the camera is stopped, stop the thread
             if self.stopped:
+                # Close camera resources
+                self.picam2.stop()
                 return
-            self.picamera2.capture_buffer(self.output)
-            self.frame = self.output.array
-            self.output.reset()
+
+            # Otherwise, grab the next frame from the stream
+            self.frame = self.picam2.capture_array()
 
     def read(self):
+        # Return the most recent frame
         return self.frame
 
     def stop(self):
+        # Indicate that the camera and thread should be stopped
         self.stopped = True
-        self.picamera2.stop()
-
+        
 # Define and parse input arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--modeldir', help='Folder the .tflite file is located in',
@@ -157,7 +165,7 @@ frame_rate_calc = 1
 freq = cv2.getTickFrequency()
 
 # Initialize video stream
-videostream = VideoStream(resolution=(imW, imH), framerate=30).start()
+videostream = VideoStream(resolution=(imW,imH),framerate=30).start()
 time.sleep(1)
 
 #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
@@ -180,7 +188,7 @@ while True:
         input_data = (np.float32(input_data) - input_mean) / input_std
 
     # Perform the actual detection by running the model with the image as input
-    interpreter.set_tensor(input_details[0]['index'], input_data)
+    interpreter.set_tensor(input_details[0]['index'],input_data)
     interpreter.invoke()
 
     # Retrieve detection results
@@ -210,7 +218,7 @@ while True:
             cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
 
     # Draw framerate in corner of frame
-    cv2.putText(frame,'FPS: {0:.2f}'.format(frame_rate_calc),(30,50),cv2.FONT_HERSHEY_SIMPLEX,0.7,(255,255,0),2,cv2.LINE_AA)
+    cv2.putText(frame,'FPS: {0:.2f}'.format(frame_rate_calc),(30,50),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
 
     # All the results have been drawn on the frame, so it's time to display it.
     cv2.imshow('Object detector', frame)
