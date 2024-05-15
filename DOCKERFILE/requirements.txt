@@ -1,1 +1,2 @@
-opencv-python
+opencv-python==4.9.0.80
+tflite-runtime==2.13.0
