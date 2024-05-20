@@ -1,0 +1,6 @@
+opencv-python
+numpy
+onnxruntime
+torch
+pillow
+picamera2
