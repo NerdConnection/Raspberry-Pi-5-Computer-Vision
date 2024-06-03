@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  webrtc:
+    build:
+      context: ./server
+      dockerfile: Dockerfile 
+    volumes:
+      - /run/udev:/run/udev:ro
+    environment:
+      - DISPLAY=$DISPLAY
+      - MODELDIR=Sample_TFLite_model
+      - GRAPH=detect.tflite
+      - LABELS=labelmap.txt
+      - THRESHOLD=0.5
+      - RESOLUTION=640x480
+      - EDGETPU=false
+    ports:
+      - "8000:8000"
+    privileged: true

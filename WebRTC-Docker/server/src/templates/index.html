@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Selector</title>
+    <style>
+        a {
+            font-size: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Raspberry-Pi-5-Computer-Vision</h1>
+    <video id="remoteVideo" autoplay></video>
+    <a href="{{ url_for('video_feed') }}" target="_self">Link to Video Feed</a>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./web:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - model1
+      - model2
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
+  model1:
+    build:
+      context: ./model1
+      dockerfile: Dockerfile
+    volumes:
+      - ./model1:/app
+    command: echo "Model 1 is built but not started"
+
+  model2:
+    build:
+      context: ./model2
+      dockerfile: Dockerfile
+    volumes:
+      - ./model2:/app
+    command: echo "Model 2 is built but not started"
