@@ -14,6 +14,28 @@
     <h1>Raspberry-Pi-5-Computer-Vision</h1>
     <video id="remoteVideo" autoplay></video>
     <a href="{{ url_for('video_feed') }}" target="_self">Link to Video Feed</a>
+
+    <div>
+        <button id="start-container">Start Container</button>
+        <button id="stop-container">Stop Container</button>
+    </div>
+
     <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script>
+        document.getElementById('start-container').addEventListener('click', function() {
+            fetch('/start_container', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(error => console.error('Error:', error));
+        });
+
+        document.getElementById('stop-container').addEventListener('click', function() {
+            fetch('/stop_container', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
 </body>
 </html>
+
