@@ -12,6 +12,7 @@ import numpy as np
 import importlib.util
 import argparse
 import os
+import subprocess
 
 # Create a Flask app instance
 app = Flask(__name__, static_url_path='/static')
@@ -183,6 +184,22 @@ def offer_route():
 @app.route('/video_feed')
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/start_container', methods=['POST'])  
+def start_container():
+    try:
+        subprocess.run(['docker', 'start', 'webrtc'], check=True)
+        return jsonify({"message": "Container started successfully"}), 200
+    except subprocess.CalledProcessError as e:
+        return jsonify({"message": "Failed to start container", "error": str(e)}), 500
+
+@app.route('/stop_container', methods=['POST'])  
+def stop_container():
+    try:
+        subprocess.run(['docker', 'stop', 'webrtc'], check=True)
+        return jsonify({"message": "Container stopped successfully"}), 200
+    except subprocess.CalledProcessError as e:
+        return jsonify({"message": "Failed to stop container", "error": str(e)}), 500
 
 # Run the Flask app
 if __name__ == '__main__':
