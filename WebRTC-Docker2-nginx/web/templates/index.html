@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Message to Server</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <h1>Send Message to Server</h1>
+    <button onclick="sendMessage()">Send Hi to Server</button>
+    <p id="response"></p>
+    <script>
+        var socket = io();
+
+        function sendMessage() {
+            socket.emit('message_to_server', 'hi');
+        }
+
+        socket.on('message_to_client', function(data) {
+            console.log(data);
+        });
+    </script>
+</body>
+</html>

@@ -1,4 +1,6 @@
 Flask
 Flask-SocketIO
+python-engineio
+python-socketio
 gunicorn
 docker

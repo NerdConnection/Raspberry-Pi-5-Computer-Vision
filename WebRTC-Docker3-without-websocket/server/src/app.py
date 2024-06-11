@@ -1,7 +1,6 @@
 from flask import Flask, render_template, Response, request, jsonify
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from picamera2 import Picamera2
-from flask_socketio import SocketIO
 import cv2
 import json
 import uuid
@@ -15,7 +14,6 @@ import os
 
 # Create a Flask app instance
 app = Flask(__name__, static_url_path='/static')
-socketio = SocketIO(app)
 
 # Set to keep track of RTCPeerConnection instances
 pcs = set()
@@ -185,5 +183,5 @@ def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Run the Flask app
-if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8000)
+if __name__ == "__main__":
+    app.run(debug=True, host='0.0.0.0', port=8999)

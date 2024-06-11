@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  webrtc:
+    build:
+      context: ./server
+      dockerfile: Dockerfile 
+    volumes:
+      - /run/udev:/run/udev:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    privileged: true
+
+
+

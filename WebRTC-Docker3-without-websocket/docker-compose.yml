@@ -16,5 +16,5 @@ services:
       - RESOLUTION=640x480
       - EDGETPU=false
     ports:
-      - "8000:8000"
+      - "8999:8999"
     privileged: true
