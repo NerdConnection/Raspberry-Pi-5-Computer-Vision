@@ -1,16 +1,11 @@
 version: '3.8'
 
 services:
-  camera:
+  webrtc-pi:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./server
+      dockerfile: Dockerfile 
     volumes:
       - /run/udev:/run/udev:ro
-      - ./local_images:/app/local_images
-      - /tmp/.X11-unix:/tmp/.X11-unix
-    environment:
-      - DISPLAY=$DISPLAY
-    ports:
-      - "8000:8000"
+    network_mode: "host"
     privileged: true
