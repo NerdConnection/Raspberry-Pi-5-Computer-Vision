@@ -8,13 +8,13 @@ import time
 import av
 import numpy as np
 import importlib.util
-import argparse
-import os
 from fractions import Fraction
 from picamera2 import Picamera2
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaStreamTrack
+import cv2
+import tflite_object_detection
 
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -25,38 +25,59 @@ cam.configure(cam.create_video_configuration())
 cam.start()
 pcs = {}
 
+# TensorFlow Lite model and label map initialization
+OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
+LABELMAP_NAME = "labels.txt" # using coco dataset label 2017
+
+# Load the label map
+with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
+    labels = [line.strip() for line in f.readlines()]
+if labels[0] == '???':
+    del(labels[0])
+
+
+
 
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform # 클라이언트에서 요청한 Ai 모델명 
-
+        self.transform = transform  # 클라이언트에서 요청한 AI 모델명
 
     # video track에 추가되는 프레임 생성 recv함수 
     async def recv(self):
-        if self.transform == "tfLite":
-            img = cam.capture_array()
+        img = cam.capture_array()
 
-            # tflite.py를 작성하여 분리, 모듈화 
-            # from tflite.py import transform_tflite
-            # new_frame = transform_tflite(img) 
-            # return new_frame
+        if self.transform == "tfLite": ###### NEED TO CHANGE TO MODEL NAME (OBJECT DETECTION)
+            # Load the TensorFlow Lite model
+            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 
+            # Transform the image using the TensorFlow Lite model
+            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
 
+            # Convert image to RGB format if it is in RGBA
+            if processed_image.shape[2] == 4:
+                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
-            pts = time.time() * 1000000
-            new_frame = av.VideoFrame.from_ndarray(img, format='rgba')
-            new_frame.pts = int(pts)
-            new_frame.time_base = Fraction(1, 1000000)
-            return new_frame
-        
+            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
+        else:
+            # Load the TensorFlow Lite model
+            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 
-        # 다른 Ai model 선택시 프레임 생성
-        elif self.transform == "otherModel":
-            pass
+            # Transform the image using the TensorFlow Lite model
+            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
 
+            # Convert image to RGB format if it is in RGBA
+            if processed_image.shape[2] == 4:
+                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
+
+            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
+
+        pts = time.time() * 1000000
+        new_frame.pts = int(pts)
+        new_frame.time_base = Fraction(1, 1000000)
+        return new_frame
 
 
 async def webrtc(request):
@@ -112,21 +133,25 @@ async def webrtc(request):
         logging.error(f"Error during WebRTC handling: {e}")
         return web.Response(content_type="application/json", text=json.dumps({"error": str(e)}), status=500)
 
+
 async def on_shutdown(app):
     coros = [pc.close() for pc in pcs.values()]
     await asyncio.gather(*coros)
     pcs.clear()
 
+
 async def index(request):
     content = open(os.path.join(ROOT_TEMPLATES, "index.html"), "r").read()
     return web.Response(content_type="text/html", text=content)
+
 
 async def javascript(request):
     content = open(os.path.join(ROOT_STATIC, "client.js"), "r").read()
     return web.Response(content_type="application/javascript", text=content)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="RatRig V-Core VAOC (WebRTC camera-streamer)")
+    parser = argparse.ArgumentParser(description="Raspberry Pi WebRTC Camera Streamer")
     parser.add_argument("--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080, help="Port for HTTP server (default: 8080)")
     parser.add_argument("--verbose", "-v", action="count")
@@ -142,5 +167,3 @@ if __name__ == "__main__":
     app.router.add_post("/webrtc", webrtc)
     logging.info(f"======== Running on http://{args.host}:{args.port} ========")
     web.run_app(app, host=args.host, port=args.port)
-
-
