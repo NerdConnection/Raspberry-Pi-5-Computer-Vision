@@ -36,10 +36,20 @@ COPY requirements.txt .
 
 RUN pip install --break-system-packages --no-cache-dir -r requirements.txt
 
-# Download and unzip the TFLite model
-RUN wget https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model.zip
-RUN unzip model.zip -d Sample_TFLite_model && rm model.zip
 
+# Download and unzip the TFLite object detection model
+RUN mkdir -p src/TFLite_model/object_detection/
+
+RUN wget https://www.kaggle.com/api/v1/models/tensorflow/efficientdet/tfLite/lite0-detection-default/1/download -O model.tar.gz \
+    && tar -xvzf model.tar.gz -C src/TFLite_model/object_detection \
+    && rm model.tar.gz \
+    && mv src/TFLite_model/object_detection/1.tflite src/TFLite_model/object_detection/efficientdet.tflite
+
+RUN wget https://www.kaggle.com/api/v1/models/tensorflow/ssd-mobilenet-v1/tfLite/default/1/download -O model.tar.gz \
+    && tar -xvzf model.tar.gz -C src/TFLite_model/object_detection \
+    && rm model.tar.gz \
+    && mv src/TFLite_model/object_detection/1.tflite src/TFLite_model/object_detection/ssd-mobilenet-v1.tflite
+    
 COPY src /app/src
 
 CMD ["python3", "src/app.py"]

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   webrtc-pi:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile 
     volumes:
       - /run/udev:/run/udev:ro
