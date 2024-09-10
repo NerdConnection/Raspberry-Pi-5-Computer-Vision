@@ -8,7 +8,10 @@ services:
     volumes:
       - /run/udev:/run/udev:ro
       - /var/run/docker.sock:/var/run/docker.sock # mount for using docker demon
-    network_mode: "host"
+    networks:
+      - your-network
+    ports:
+      - "8080:8080"
     privileged: true
 
   tflite:
@@ -19,4 +22,11 @@ services:
       - /run/udev:/run/udev:ro
     privileged: true
     container_name: tflite
-    network_mode: "host"
+    ports:
+      - "8000:8000"
+    networks:
+      - your-network
+
+networks:
+  your-network:
+    driver: bridge

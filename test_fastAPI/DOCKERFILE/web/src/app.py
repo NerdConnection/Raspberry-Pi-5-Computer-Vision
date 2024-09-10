@@ -14,8 +14,11 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaStreamTrack
 import cv2
-import tflite_object_detection
 import docker
+import requests
+from PIL import Image
+import io
+import httpx
 
 # For control docker container
 client = docker.from_env()
@@ -26,21 +29,7 @@ tflite_container = next((c for c in containers if c.name == "tflite"), None)
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
 ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
-
-cam = Picamera2()
-cam.configure(cam.create_video_configuration())
-cam.start()
 pcs = {}
-
-# TensorFlow Lite model and label map initialization
-OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
-LABELMAP_NAME = "labels.txt" # using coco dataset label 2017
-
-# Load the label map
-with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
-    labels = [line.strip() for line in f.readlines()]
-if labels[0] == '???':
-    del(labels[0])
 
 
 class PiCameraTrack(MediaStreamTrack):
@@ -48,41 +37,22 @@ class PiCameraTrack(MediaStreamTrack):
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform  # model selected by user
+        self.transform = transform
 
-    # Recv function to create frames added to video track
     async def recv(self):
-        img = cam.capture_array()
+        if self.transform == "tfLite":
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://tflite:8000/get_frame/")
+            img_bytes = io.BytesIO(response.content)
+            img = Image.open(img_bytes)
+            img_np = np.array(img)
 
-        if self.transform == "tfLite": ###### NEED TO CHANGE TO MODEL NAME (OBJECT DETECTION)
-            # Load the TensorFlow Lite model
-            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 
-            # Transform the image using the TensorFlow Lite model
-            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
-
-            # Convert image to RGB format if it is in RGBA
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
-
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-        else:
-            # Load the TensorFlow Lite model
-            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
-
-            # Transform the image using the TensorFlow Lite model
-            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
-
-            # Convert image to RGB format if it is in RGBA
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
-
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-
-        pts = time.time() * 1000000
-        new_frame.pts = int(pts)
-        new_frame.time_base = Fraction(1, 1000000)
-        return new_frame
+            pts = time.time() * 1000000
+            new_frame = av.VideoFrame.from_ndarray(img_np, format='rgba')
+            new_frame.pts = int(pts)
+            new_frame.time_base = Fraction(1, 1000000)
+            return new_frame
 
 
 async def on_connectionstatechange(pc_id, pc, model):
