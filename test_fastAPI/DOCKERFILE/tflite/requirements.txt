@@ -1,4 +1,0 @@
-opencv-python==4.9.0.80
-tflite-runtime==2.14.0
-fastapi
-uvicorn

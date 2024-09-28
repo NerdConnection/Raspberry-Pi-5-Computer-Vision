@@ -76,3 +76,22 @@ function stop() {
         }
     }, 500);
 }
+
+
+
+let frameCount = 0; // Frame counter
+let lastTimestamp = performance.now(); // Last timestamp
+
+function calculateFPS() {
+    const now = performance.now();
+    frameCount++;
+
+    if (now - lastTimestamp >= 1000) {
+        const fps = frameCount; // Calculate FPS
+        document.getElementById('fpsCount').innerText = `FPS: ${fps}`;
+        frameCount = 0; // Reset count
+        lastTimestamp = now; // Update timestamp
+    }
+
+    requestAnimationFrame(calculateFPS);
+}

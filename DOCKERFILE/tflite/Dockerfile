@@ -51,3 +51,5 @@ RUN wget https://www.kaggle.com/api/v1/models/tensorflow/ssd-mobilenet-v1/tfLite
     && mv src/TFLite_model/object_detection/1.tflite src/TFLite_model/object_detection/ssd-mobilenet-v1.tflite
     
 COPY src /app/src
+
+CMD ["python3", "src/app.py"]

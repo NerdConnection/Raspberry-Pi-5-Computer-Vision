@@ -17,6 +17,7 @@ services:
       dockerfile: Dockerfile 
     volumes:
       - /run/udev:/run/udev:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     privileged: true
     container_name: tflite
     network_mode: "host"
