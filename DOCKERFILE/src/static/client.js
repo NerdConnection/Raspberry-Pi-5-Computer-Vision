@@ -76,3 +76,20 @@ function stop() {
         }
     }, 500);
 }
+
+async function fetchContainerStatus(containerName) {
+    const response = await fetch(`/container_status/${containerName}`);
+    const data = await response.json();
+    return data.status;
+}
+
+async function updateContainerStatus() {
+    const containerName = 'webrtc-pi';  
+    const status = await fetchContainerStatus(containerName);
+    document.getElementById('container-status').innerText = `Container ${containerName} is ${status}`;
+}
+
+window.onload = function() {
+    updateContainerStatus();
+    setInterval(updateContainerStatus, 5000); // ex : 5 seconds
+};
