@@ -7,6 +7,7 @@ import uuid
 import time
 import av
 import numpy as np
+import docker
 import importlib.util
 from fractions import Fraction
 from picamera2 import Picamera2
@@ -25,6 +26,7 @@ cam.configure(cam.create_video_configuration())
 cam.start()
 pcs = {}
 
+docker_client = docker.from_env()
 relay = MediaRelay()
 
 # TensorFlow Lite model and label map initialization
@@ -45,10 +47,9 @@ class PiCameraTrack(MediaStreamTrack):
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform  # 클라이언트에서 요청한 AI 모델명
+        self.transform = transform  
         self.lock = asyncio.Lock()
 
-        # 모델을 초기화 시에 로드
         if self.transform == "tfLite":
             self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite')
         else:
@@ -72,8 +73,7 @@ class PiCameraTrack(MediaStreamTrack):
             new_frame.time_base = Fraction(1, 1000000)
             return new_frame
 
-# 전역 변수로 PiCameraTrack 인스턴스 생성
-camera_track = PiCameraTrack(transform="tfLite")  # 필요한 경우 transform 값을 조정
+camera_track = PiCameraTrack(transform="tfLite") 
 
 async def webrtc(request):
     logging.info("Received WebRTC request")
@@ -144,6 +144,31 @@ async def javascript(request):
     content = open(os.path.join(ROOT_STATIC, "client.js"), "r").read()
     return web.Response(content_type="application/javascript", text=content)
 
+# container status
+def get_container_status(container_name):
+    try:
+        container = docker_client.containers.get(container_name)
+        return container.status  # 'running', 'exited' 등
+    except docker.errors.NotFound:
+        return 'not_found'
+    except Exception as e:
+        logging.error(f"Error getting container status: {e}")
+        return 'error'
+
+async def container_status(request):
+    container_name = request.match_info.get('name', None)
+    if not container_name:
+        return web.Response(text="Container name not provided", status=400)
+    
+    status = get_container_status(container_name)
+    return web.json_response({'container': container_name, 'status': status})
+
+async def all_containers_status(request):
+    containers = docker_client.containers.list(all=True)
+    status_dict = {}
+    for container in containers:
+        status_dict[container.name] = container.status
+    return web.json_response(status_dict)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Raspberry Pi WebRTC Camera Streamer")
@@ -160,5 +185,9 @@ if __name__ == "__main__":
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/webrtc", webrtc)
+
+    app.router.add_get('/container_status/{name}', container_status)
+    app.router.add_get('/containers_status', all_containers_status)
+
     logging.info(f"======== Running on http://{args.host}:{args.port} ========")
     web.run_app(app, host=args.host, port=args.port)
