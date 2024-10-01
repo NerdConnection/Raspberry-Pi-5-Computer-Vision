@@ -12,7 +12,7 @@ from fractions import Fraction
 from picamera2 import Picamera2
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaStreamTrack
+from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
 import tflite_object_detection
 
@@ -24,6 +24,8 @@ cam = Picamera2()
 cam.configure(cam.create_video_configuration())
 cam.start()
 pcs = {}
+
+relay = MediaRelay()
 
 # TensorFlow Lite model and label map initialization
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
@@ -44,29 +46,20 @@ class PiCameraTrack(MediaStreamTrack):
     def __init__(self, transform):
         super().__init__()
         self.transform = transform  # 클라이언트에서 요청한 AI 모델명
+        self.lock = asyncio.Lock()
 
-    # video track에 추가되는 프레임 생성 recv함수 
-    async def recv(self):
-        img = cam.capture_array()
-
-        if self.transform == "tfLite": ###### NEED TO CHANGE TO MODEL NAME (OBJECT DETECTION)
-            # Load the TensorFlow Lite model
-            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
-
-            # Transform the image using the TensorFlow Lite model
-            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
-
-            # Convert image to RGB format if it is in RGBA
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
-
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
+        # 모델을 초기화 시에 로드
+        if self.transform == "tfLite":
+            self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite')
         else:
-            # Load the TensorFlow Lite model
-            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
+            self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite')
+
+    async def recv(self):
+        async with self.lock:
+            img = cam.capture_array()
 
             # Transform the image using the TensorFlow Lite model
-            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
+            processed_image = tflite_object_detection.transform_tflite(img, self.interpreter, self.input_details, self.output_details, labels)
 
             # Convert image to RGB format if it is in RGBA
             if processed_image.shape[2] == 4:
@@ -74,11 +67,13 @@ class PiCameraTrack(MediaStreamTrack):
 
             new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
 
-        pts = time.time() * 1000000
-        new_frame.pts = int(pts)
-        new_frame.time_base = Fraction(1, 1000000)
-        return new_frame
+            pts = time.time() * 1000000
+            new_frame.pts = int(pts)
+            new_frame.time_base = Fraction(1, 1000000)
+            return new_frame
 
+# 전역 변수로 PiCameraTrack 인스턴스 생성
+camera_track = PiCameraTrack(transform="tfLite")  # 필요한 경우 transform 값을 조정
 
 async def webrtc(request):
     logging.info("Received WebRTC request")
@@ -96,8 +91,8 @@ async def webrtc(request):
                     await pc.close()
                     pcs.pop(pc_id, None)
 
-            cam_track = PiCameraTrack(transform=params["video_transform"])
-            pc.addTrack(cam_track)
+            pc.addTrack(relay.subscribe(camera_track))
+            
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
 
