@@ -25,6 +25,7 @@ cam = Picamera2()
 cam.configure(cam.create_video_configuration())
 cam.start()
 
+
 pcs = {}
 relay = MediaRelay()
 
@@ -41,12 +42,10 @@ if labels[0] == '???':
 
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
-    
 
     def __init__(self, transform):
         super().__init__()
         self.transform = transform  # model selected by user
-        self.cam = None
 
     # Recv function to create frames added to video track
     async def recv(self):
@@ -182,7 +181,7 @@ async def javascript(request):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Raspberry Pi WebRTC Camera Streamer")
     parser.add_argument("--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=80, help="Port for HTTP server (default: 8080)")
+    parser.add_argument("--port", type=int, default=81, help="Port for HTTP server (default: 8080)")
     parser.add_argument("--verbose", "-v", action="count")
 
     args = parser.parse_args()
