@@ -28,12 +28,12 @@
     <div class="option">
         <select id="video-transform">
             <option value="tfLite" selected>Tensorflow-lite</option>
-            <option value="other">other</option>
+            <option value="other">mobile-net</option>
         </select>
     </div>
 
     <button id="start" onclick="start()">Start</button>
-    <button id="stop" style="display: none" onclick="stop()">Stop</button>
+    <button id="back_to_home" onclick="back_to_home()">back to home</button>
 
     <div id="media">
         <h2>Media</h2>
@@ -41,8 +41,6 @@
         <audio id="audio" autoplay="true"></audio>
         <video id="video" autoplay="true" playsinline="true"></video>
     </div>
-
-
 <script src="client.js"></script>
 </body>
 </html>

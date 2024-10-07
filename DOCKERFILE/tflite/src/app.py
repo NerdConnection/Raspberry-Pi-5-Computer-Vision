@@ -12,9 +12,10 @@ from fractions import Fraction
 from picamera2 import Picamera2
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaStreamTrack
+from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
 import tflite_object_detection
+import subprocess
 
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -23,7 +24,9 @@ ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 cam = Picamera2()
 cam.configure(cam.create_video_configuration())
 cam.start()
+
 pcs = {}
+relay = MediaRelay()
 
 # TensorFlow Lite model and label map initialization
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
@@ -36,16 +39,16 @@ if labels[0] == '???':
     del(labels[0])
 
 
-
-
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
+    
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform  # 클라이언트에서 요청한 AI 모델명
+        self.transform = transform  # model selected by user
+        self.cam = None
 
-    # video track에 추가되는 프레임 생성 recv함수 
+    # Recv function to create frames added to video track
     async def recv(self):
         img = cam.capture_array()
 
@@ -80,6 +83,21 @@ class PiCameraTrack(MediaStreamTrack):
         return new_frame
 
 
+async def on_connectionstatechange(pc_id, pc, model):
+    logging.info(f"Connection state for {pc_id} is {pc.connectionState}")
+    if pc.connectionState == "failed":
+        logging.error(f"Connection {pc_id} failed. Closing connection.")
+        await pc.close()
+        pcs.pop(pc_id, None)
+        
+    elif pc.connectionState == "closed":
+        logging.info(f"Connection {pc_id} closed. Removing from pcs.")
+        pcs.pop(pc_id, None)
+
+    elif pc.connectionState == "connecting":
+        logging.info("connecting container 'tflite'")
+                
+
 async def webrtc(request):
     logging.info("Received WebRTC request")
     try:
@@ -88,16 +106,12 @@ async def webrtc(request):
             pc = RTCPeerConnection()
             pc_id = f"PeerConnection({uuid.uuid4()})"
             pcs[pc_id] = pc
-
-            @pc.on("connectionstatechange")
-            async def on_connectionstatechange():
-                print(f"Connection state is {pc.connectionState}")
-                if pc.connectionState == "failed":
-                    await pc.close()
-                    pcs.pop(pc_id, None)
-
+            pc.on("connectionstatechange")(lambda: asyncio.create_task(on_connectionstatechange(pc_id, pc, params["video_transform"])))
+            
             cam_track = PiCameraTrack(transform=params["video_transform"])
+            relay.subscribe(cam_track)
             pc.addTrack(cam_track)
+            
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
 
@@ -140,6 +154,21 @@ async def on_shutdown(app):
     pcs.clear()
 
 
+async def return_ip(request):
+    data = await request.json()
+    # Executes a command to retrieve the IP address of the Raspberry Pi's 'wlan0' interface
+    result = subprocess.run(["ip", "addr", "show", "wlan0"], capture_output=True, text=True)
+    output = result.stdout
+    for line in output.splitlines():
+        if "inet " in line:
+            ip_address = line.split()[1].split('/')[0] 
+            break
+    else:
+        ip_address = None 
+        
+    logging.info(f"======== wlan0 IP: {ip_address} ========")
+    return web.json_response({"ip": ip_address})
+    
 async def index(request):
     content = open(os.path.join(ROOT_TEMPLATES, "index.html"), "r").read()
     return web.Response(content_type="text/html", text=content)
@@ -153,7 +182,7 @@ async def javascript(request):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Raspberry Pi WebRTC Camera Streamer")
     parser.add_argument("--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8080, help="Port for HTTP server (default: 8080)")
+    parser.add_argument("--port", type=int, default=80, help="Port for HTTP server (default: 8080)")
     parser.add_argument("--verbose", "-v", action="count")
 
     args = parser.parse_args()
@@ -165,5 +194,7 @@ if __name__ == "__main__":
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/webrtc", webrtc)
+    app.router.add_post("/get-ip", return_ip)
     logging.info(f"======== Running on http://{args.host}:{args.port} ========")
     web.run_app(app, host=args.host, port=args.port)
+

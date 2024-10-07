@@ -1,11 +1,33 @@
 version: '3.8'
 
 services:
-  webrtc-pi:
+  web:
     build:
-      context: .
+      context: web/.
       dockerfile: Dockerfile 
     volumes:
       - /run/udev:/run/udev:ro
+      - /var/run/docker.sock:/var/run/docker.sock # for using docker demon
     network_mode: "host"
     privileged: true
+    container_name: web
+
+  tflite:
+    build:
+      context: tflite/.
+      dockerfile: Dockerfile 
+    volumes:
+      - /run/udev:/run/udev:ro
+    privileged: true
+    container_name: tflite
+    network_mode: "host"
+    
+  another_model:
+    build:
+      context: another_model/.
+      dockerfile: Dockerfile 
+    volumes:
+      - /run/udev:/run/udev:ro
+    privileged: true
+    container_name: another_model
+    network_mode: "host"
