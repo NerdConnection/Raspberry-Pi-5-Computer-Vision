@@ -1,0 +1,144 @@
+## 로그 정리 (전체 흐름)
+
+### 1.1 첫 번째 사용자 연결 및 프레임 생성 부분
+- **프레임 생성 및 처리**  
+  ```
+2024-10-07 01:37:25,870 DEBUG: Captured image frame with shape: (720, 1280, 4)
+2024-10-07 01:37:25,870 DEBUG: Using tfLite model for transformation
+2024-10-07 01:37:26,011 DEBUG: Processed and created new video frame at pts: 1728351446010969
+  ```
+  - TFLite 모델을 사용하여 프레임이 처리된 후 새로운 비디오 프레임이 생성됨.
+
+- **첫 번째 사용자 연결 종료**  
+  ```
+2024-10-07 01:37:25,848 INFO: Connection state for PeerConnection(22a4b38e-842c-42d5-9b0e-dfa628562563) is closed
+2024-10-07 01:37:25,848 INFO: Connection PeerConnection(22a4b38e-842c-42d5-9b0e-dfa628562563) closed. Removing from pcs.
+  ```
+
+### 1.2 두 번째 사용자 연결 및 프레임 공유
+- **프레임 공유 (relay 함수 관련)**
+  ```
+2024-10-07 01:37:26,042 DEBUG: RTCRtpSender(video) > RtpPacket(seq=64447, ts=1505800884, marker=0, payload=97, 1300 bytes)
+...
+2024-10-07 01:37:26,593 DEBUG: RTCRtpSender(video) > RtpPacket(seq=64669, ts=1505848568, marker=0, payload=97, 1300 bytes)
+  ```
+  - `relay` 함수는 동일한 비디오 프레임을 여러 사용자가 실시간으로 공유할 수 있도록 중계 역할을 수행
+  - `RTCRtpSender(video)`는 비디오 프레임 데이터를 포함한 RTP 패킷을 여러 수신자에게 전송하며 동일한 프레임이 여러 RTP 패킷으로 나누어져 두 사용자에게 공유
+
+- **두 번째 사용자 연결 종료**  
+  ```
+2024-10-07 01:37:27,100 INFO: Connection state for PeerConnection(86ad60f5-1f0e-41ee-b6a1-255b8facb9a9) is closed
+2024-10-07 01:37:27,100 INFO: Connection PeerConnection(86ad60f5-1f0e-41ee-b6a1-255b8facb9a9) closed. Removing from pcs.
+  ```
+
+- **두 접속자가 동일한 프레임을 공유한 부분**  
+  ```
+2024-10-07 01:37:26,050 DEBUG: Captured image frame with shape: (720, 1280, 4)
+2024-10-07 01:37:26,050 DEBUG: Using tfLite model for transformation
+...
+2024-10-07 01:37:26,731 DEBUG: Processed and created new video frame at pts: 1728351446731301
+  ```
+  - 두 번째 사용자가 연결되었을 때, 첫 번째 사용자와 동일한 프레임이 공유됨. 
+  - 동일한 이미지 프레임이 두 사용자에게 중계되어 두 사용자가 동시에 동일한 비디오 스트림을 중계
+
+### 1.3 연결 종료 및 자원 정리
+- **연결 종료 및 자원 해제**
+  ```
+2024-10-07 01:37:27,099 DEBUG: RTCDtlsTransport(server) - State.CONNECTED -> State.CLOSED
+2024-10-07 01:37:27,100 DEBUG: RTCPeerConnection() connectionState connected -> closed
+2024-10-07 01:37:30,823 INFO: Camera stopped
+2024-10-07 01:37:30,830 INFO: Camera closed successfully.
+2024-10-07 01:37:30,923 DEBUG: Resources now free: <picamera2.picamera2.Picamera2 object at 0x7fff9c3b6f50>
+  ```
+  - DTLS와 PeerConnection 상태가 `CLOSED`로 전환
+
+
+## 로그 정리(relay 흐름)
+
+### 0. 먼저 WebRTC 함수 내에서의 동작
+
+1. 클라이언트의 요청을 수신하고 파싱
+2. 새로운 `RTCPeerConnection`을 생성하고, 고유 ID를 할당
+3. 연결 상태 변경 이벤트 핸들러를 설정
+4. `PiCameraTrack` 인스턴스를 생성
+5. `MediaRelay`를 통해 `PiCameraTrack`을 구독
+6. 구독된 트랙을 피어 연결에 추가
+7. 세션 설명(offer)을 생성하고 클라이언트에게 반환
+
+## 실제 로그 순서
+
+1. `webrtc` 함수가 호출되고 요청을 수신
+
+```yaml
+2024-10-07 09:10:00,100 INFO: Received WebRTC request
+```
+
+2. 새로운 `RTCPeerConnection` 생성
+
+```yaml
+2024-10-07 09:10:00,101 INFO: Created new PeerConnection with id: PeerConnection(12345678-1234-1234-1234-123456789abc)
+```
+
+3. 연결 상태 변경 이벤트 핸들러 설정
+   - 이 부분은 일반적으로 로그를 생성하지 않습니다.
+
+4. `PiCameraTrack` 인스턴스 생성
+
+```yaml
+2024-10-07 09:10:00,102 INFO: PiCameraTrack initialized with transform: tfLite
+```
+
+5. `MediaRelay`를 통해 트랙 구독 (`subscribe_relay` 함수 호출)
+
+```yaml
+2024-10-07 09:10:00,103 INFO: Subscribing a new track to the relay
+2024-10-07 09:10:00,105 INFO: Subscription successful
+```
+
+6. 구독된 트랙을 피어 연결에 추가
+
+```yaml
+2024-10-07 09:10:00,106 DEBUG: Added subscribed PiCameraTrack to PeerConnection: PeerConnection(12345678-1234-1234-1234-123456789abc)
+```
+
+7. 세션 설명(offer)을 생성하고 설정
+
+```yaml
+2024-10-07 09:10:00,107 DEBUG: Created and set local description for PeerConnection: PeerConnection(12345678-1234-1234-1234-123456789abc)
+```
+
+8. 클라이언트에게 offer 반환
+
+```yaml
+2024-10-07 09:10:00,108 INFO: Returning offer for PeerConnection: PeerConnection(12345678-1234-1234-1234-123456789abc)
+```
+
+`Subscribing a new track to the relay` 및 `Subscription successful` 로그는 `PiCameraTrack` 인스턴스를 생성한 후, 구독을 진행하는 단계에서 나타나게 됨.
+
+## 전체 로그
+
+```yaml
+2024-10-07 09:10:00,100 INFO: Received WebRTC request
+2024-10-07 09:10:00,101 INFO: Created new PeerConnection with id: PeerConnection(12345678-1234-1234-1234-123456789abc)
+2024-10-07 09:10:00,102 INFO: PiCameraTrack initialized with transform: tfLite
+2024-10-07 09:10:00,103 INFO: Subscribing a new track to the relay
+2024-10-07 09:10:00,105 INFO: Subscription successful
+2024-10-07 09:10:00,106 DEBUG: Added subscribed PiCameraTrack to PeerConnection: PeerConnection(12345678-1234-1234-1234-123456789abc)
+2024-10-07 09:10:00,107 DEBUG: Created and set local description for PeerConnection: PeerConnection(12345678-1234-1234-1234-123456789abc)
+2024-10-07 09:10:00,108 INFO: Returning offer for PeerConnection: PeerConnection(12345678-1234-1234-1234-123456789abc)
+2024-10-07 09:10:05,200 INFO: Second client connected
+2024-10-07 09:10:05,201 INFO: Subscribing a new track to the relay for second client
+2024-10-07 09:10:05,203 INFO: Subscription successful for second client
+2024-10-07 09:10:05,204 DEBUG: Added subscribed PiCameraTrack to PeerConnection: PeerConnection(23456789-2345-2345-2345-234567890bcd)
+2024-10-07 09:10:05,205 DEBUG: Created and set local description for PeerConnection: PeerConnection(23456789-2345-2345-2345-234567890bcd)
+2024-10-07 09:10:05,206 INFO: Returning offer for PeerConnection: PeerConnection(23456789-2345-2345-2345-234567890bcd)
+```
+
+첫 번째와 두 번째 사용자는 동일한 `PiCameraTrack`을 `MediaRelay`를 통해 구독하여 동일한 프레임을 공유
+
+
+## 정리
+따라서, `Subscribing a new track to the relay` 및 `Subscription successful` 로그는 `PiCameraTrack`이 초기화된 후, 피어 연결에 트랙을 추가하기 전에 생성
+
+첫 번째와 두 번째 클라이언트 모두 동일한 `PiCameraTrack`을 `MediaRelay`를 통해 구독하여 같은 영상을 공유하게 되며, 
+`webrtc` 함수 내에서 새로운 피어 연결을 설정하고, 미디어 스트림을 준비하는 과정에서 나타나게 됨.
