@@ -16,6 +16,7 @@ from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
 import tflite_object_detection
 import subprocess
+import logging
 
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -38,6 +39,13 @@ with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
 if labels[0] == '???':
     del(labels[0])
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+
+def subscribe_relay(relay, track):
+    logging.info("Subscribing a new track to the relay")
+    subscribed_track = relay.subscribe(track)
+    logging.info("Subscription successful")
+    return subscribed_track
 
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
@@ -46,13 +54,16 @@ class PiCameraTrack(MediaStreamTrack):
     def __init__(self, transform):
         super().__init__()
         self.transform = transform  # model selected by user
-        self.cam = None
+        logging.info(f"PiCameraTrack initialized with transform: {self.transform}")
 
     # Recv function to create frames added to video track
     async def recv(self):
+        logging.debug("PiCameraTrack.recv called")
         img = cam.capture_array()
+        logging.debug(f"Captured image frame with shape: {img.shape}")
 
         if self.transform == "tfLite": ###### NEED TO CHANGE TO MODEL NAME (OBJECT DETECTION)
+            logging.debug("Using tfLite model for transformation")
             # Load the TensorFlow Lite model
             interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 
@@ -65,6 +76,7 @@ class PiCameraTrack(MediaStreamTrack):
 
             new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
         else:
+            logging.debug("Using another_model for transformation")
             # Load the TensorFlow Lite model
             interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 
@@ -74,14 +86,16 @@ class PiCameraTrack(MediaStreamTrack):
             # Convert image to RGB format if it is in RGBA
             if processed_image.shape[2] == 4:
                 processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
+                logging.debug("Converted RGBA image to RGB")
 
             new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
 
         pts = time.time() * 1000000
         new_frame.pts = int(pts)
         new_frame.time_base = Fraction(1, 1000000)
+        
+        logging.debug(f"Processed and created new video frame at pts: {new_frame.pts}")
         return new_frame
-
 
 async def on_connectionstatechange(pc_id, pc, model):
     logging.info(f"Connection state for {pc_id} is {pc.connectionState}")
@@ -95,8 +109,8 @@ async def on_connectionstatechange(pc_id, pc, model):
         pcs.pop(pc_id, None)
 
     elif pc.connectionState == "connecting":
-        logging.info("connecting container 'tflite'")
-                
+        logging.info(f"Connecting container 'relay' for PeerConnection: {pc_id}")
+
 
 async def webrtc(request):
     logging.info("Received WebRTC request")
@@ -106,20 +120,27 @@ async def webrtc(request):
             pc = RTCPeerConnection()
             pc_id = f"PeerConnection({uuid.uuid4()})"
             pcs[pc_id] = pc
+            logging.info(f"Created new PeerConnection with id: {pc_id}")
+            
             pc.on("connectionstatechange")(lambda: asyncio.create_task(on_connectionstatechange(pc_id, pc, params["video_transform"])))
             
             cam_track = PiCameraTrack(transform=params["video_transform"])
             relay.subscribe(cam_track)
+            logging.info(f"Subscribed PiCameraTrack to relay for PeerConnection: {pc_id}")
+            
             pc.addTrack(cam_track)
+            logging.debug(f"Added subscribed PiCameraTrack to PeerConnection: {pc_id}")
             
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
+            logging.debug(f"Created and set local description for PeerConnection: {pc_id}")
 
             await asyncio.sleep(0)  # Allow other tasks to run
 
             while pc.iceGatheringState != "complete":
                 await asyncio.sleep(0.1)
-
+            
+            logging.info(f"Returning offer for PeerConnection: {pc_id}")
             return web.Response(
                 content_type="application/json",
                 text=json.dumps({
@@ -133,6 +154,7 @@ async def webrtc(request):
             pc = pcs.get(params["id"])
 
             if not pc:
+                logging.error(f"PeerConnection not found for id: {params['id']}")
                 return web.Response(
                     content_type="application/json",
                     text=json.dumps({"error": "PeerConnection not found"}),
@@ -140,7 +162,8 @@ async def webrtc(request):
                 )
 
             await pc.setRemoteDescription(RTCSessionDescription(sdp=params["sdp"], type=params["type"]))
-
+            logging.info(f"Set remote description for PeerConnection: {params['id']}")
+            
             return web.Response(content_type="application/json", text=json.dumps({}))
 
     except Exception as e:
@@ -188,7 +211,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-
+    logging.basicConfig(level=log_level, format='%(asctime)s %(levelname)s: %(message)s')
+    
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
