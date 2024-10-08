@@ -104,3 +104,19 @@ window.addEventListener('beforeunload', (event) => {
         }
     }, 500);
 });
+
+async function logStats() {
+    if (pc) {
+        const stats = await pc.getStats();
+        stats.forEach(report => {
+            console.log(`Report: ${report.type} ${report.id}`);
+            for (let [key, value] of Object.entries(report)) {
+                if (key !== 'type' && key !== 'id' && key !== 'timestamp' && key !== 'streams') {
+                    console.log(`  ${key}: ${value}`);
+                }
+            }
+        });
+    }
+}
+
+setInterval(logStats, 5000);
