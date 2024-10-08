@@ -53,4 +53,4 @@ RUN wget https://www.kaggle.com/api/v1/models/tensorflow/ssd-mobilenet-v1/tfLite
     
 COPY src /app/src
 
-CMD ["python3", "src/app.py"]
+CMD ["python3", "src/app.py", "--verbose"]
