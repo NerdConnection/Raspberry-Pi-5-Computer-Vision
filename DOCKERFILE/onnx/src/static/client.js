@@ -1,6 +1,6 @@
-var pc = null;
 var serverUrl = '/webrtc';
 const config = { sdpSemantics: 'unified-plan', iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
+var pc = new RTCPeerConnection(config);
 
 async function fetchFromServer(type, data) {
     const response = await fetch(serverUrl, {
@@ -49,7 +49,7 @@ async function negotiate() {
 }
 
 function start() {
-    pc = new RTCPeerConnection(config);
+    //pc = new RTCPeerConnection(config);
 
     // Handle incoming tracks
     pc.addEventListener('track', (evt) => {
@@ -62,17 +62,45 @@ function start() {
 
     document.getElementById('start').style.display = 'none';
     negotiate();
-    document.getElementById('stop').style.display = 'inline-block';
 }
 
-function stop() {
-    document.getElementById('stop').style.display = 'none';
+async function get_home_IP() {
+    try {
+        const response = await fetch('/get-ip',{
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+        }); 
+        const data = await response.json();
+        return data.ip; // Return the IP from the response
+    } catch (error) {
+        console.error('Error fetching IP:', error);
+        return null;
+    }
+}
 
-    // Close peer connection
+// back to 8080 web container server
+async function back_to_home() {
+    const ip = await get_home_IP();
+    if (ip) {
+        if (pc) {
+            pc.close();
+            pc = null;
+        }
+        window.location.href = `http://${ip}:8080`; // Use the fetched IP
+    } else {
+        console.error('Unable to retrieve IP address');
+    }
+}
+
+// Remove connection when the client closes the window
+window.addEventListener('beforeunload', (event) => {
     setTimeout(() => {
         if (pc) {
             pc.close();
             pc = null;
         }
     }, 500);
-}
+});
