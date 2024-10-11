@@ -33,24 +33,18 @@ RUN apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Install Python dependencies from requirements.txt
 COPY requirements.txt .
 
 RUN pip install --break-system-packages --no-cache-dir -r requirements.txt
 
+# Download and unzip the ONNX models
+RUN mkdir -p src/ONNX_model/object_detection/
 
-# Download and unzip the TFLite object detection model
-RUN mkdir -p src/TFLite_model/object_detection/
+RUN wget https://github.com/onnx/models/raw/refs/heads/main/validated/vision/object_detection_segmentation/tiny-yolov3/model/tiny-yolov3-11.onnx -O src/ONNX_model/object_detection/tiny-yolov3.onnx
 
-RUN wget https://www.kaggle.com/api/v1/models/tensorflow/efficientdet/tfLite/lite0-detection-default/1/download -O model.tar.gz \
-    && tar -xvzf model.tar.gz -C src/TFLite_model/object_detection \
-    && rm model.tar.gz \
-    && mv src/TFLite_model/object_detection/1.tflite src/TFLite_model/object_detection/efficientdet.tflite
+RUN wget https://github.com/onnx/models/raw/refs/heads/main/validated/vision/object_detection_segmentation/yolov3/model/yolov3-12-int8.onnx -O src/ONNX_model/object_detection/yolov3.onnx
 
-RUN wget https://www.kaggle.com/api/v1/models/tensorflow/ssd-mobilenet-v1/tfLite/default/1/download -O model.tar.gz \
-    && tar -xvzf model.tar.gz -C src/TFLite_model/object_detection \
-    && rm model.tar.gz \
-    && mv src/TFLite_model/object_detection/1.tflite src/TFLite_model/object_detection/ssd-mobilenet-v1.tflite
-    
 COPY src /app/src
 
 CMD ["python3", "src/app.py"]

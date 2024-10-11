@@ -49,8 +49,6 @@ async function negotiate() {
 }
 
 function start() {
-    //pc = new RTCPeerConnection(config);
-
     // Handle incoming tracks
     pc.addEventListener('track', (evt) => {
         if (evt.track.kind == 'video') {

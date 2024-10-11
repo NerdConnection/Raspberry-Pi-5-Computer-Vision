@@ -19,9 +19,9 @@ containers = client.containers.list(all=True)
 tflite_container = next((c for c in containers if c.name == "tflite"), None) 
 tflite_container_counter = 0
 
-# another_model_container
-another_model_container = next((c for c in containers if c.name == "another_model"), None) 
-another_model_container_counter = 0
+# onnx_model_container
+onnx_model_container = next((c for c in containers if c.name == "onnx"), None)
+onnx_model_container_counter = 0
 
 
 ROOT = os.path.dirname(__file__)
@@ -31,7 +31,7 @@ ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 async def return_ip(request):
     data = await request.json()
     model_name = data.get("model")
-    logging.info(f"======== container status : {tflite_container.status} ========")
+    logging.info(f"========{model_name} container status : {onnx_model_container.status} ========")
     
     # add logic to control selected continer based on the model name
     if model_name == "tflite":
@@ -41,13 +41,12 @@ async def return_ip(request):
         elif tflite_container.status == "running":
             logging.info("tflite container is already running.")
         
-    elif model_name == "another_model":
-        if another_model_container.status == "exited":
-            another_model_container.start()
-            logging.info("another_model container started.")
-        elif another_model_container.status == "running":
-            logging.info("another_model container is already running.")
-        
+    elif model_name == "onnx":
+        if onnx_model_container.status == "exited":
+            onnx_model_container.start()
+            logging.info("onnx_model container started.")
+        elif onnx_model_container.status == "running":
+            logging.info("onnx_model container is already running.")  
         
     # Executes a command to retrieve the IP address of the Raspberry Pi's 'wlan0' interface
     result = subprocess.run(["ip", "addr", "show", "wlan0"], capture_output=True, text=True)
@@ -71,7 +70,7 @@ async def return_containers(request):
     
     # Prepare the response data
     container_data = []
-    valid_containers = {"tflite", "another_model"}
+    valid_containers = {"tflite", "onnx"}
     for container in containers:
         if container.name in valid_containers:
             container_info = {

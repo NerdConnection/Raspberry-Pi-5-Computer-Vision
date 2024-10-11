@@ -22,12 +22,12 @@ services:
     container_name: tflite
     network_mode: "host"
     
-  another_model:
+  onnx:
     build:
-      context: another_model/.
+      context: onnx/.
       dockerfile: Dockerfile 
     volumes:
       - /run/udev:/run/udev:ro
     privileged: true
-    container_name: another_model
+    container_name: onnx
     network_mode: "host"

@@ -9,6 +9,7 @@ async function getCurrentIP(model) {
             body: JSON.stringify({ model }),
         }); 
         const data = await response.json();
+        console.log(data.ip)
         return data.ip; // Return the IP from the response
     } catch (error) {
         console.error('Error fetching IP:', error);
@@ -18,11 +19,12 @@ async function getCurrentIP(model) {
 
 
 async function move(container_name) {
+    console.log(container_name);
     const ip = await getCurrentIP(container_name);
     if (container_name === "tflite") {
         window.location.href = `http://${ip}:80`;
     } 
-    else if(container_name === "another_model"){
+    else if(container_name === "onnx"){
         window.location.href = `http://${ip}:81`;
     }
     else {
