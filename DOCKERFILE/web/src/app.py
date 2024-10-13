@@ -31,22 +31,28 @@ ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 async def return_ip(request):
     data = await request.json()
     model_name = data.get("model")
-    logging.info(f"========{model_name} container status : {onnx_model_container.status} ========")
+    logging.info(f"======== Requested model: {model_name} ========")
     
-    # add logic to control selected continer based on the model name
-    if model_name == "tflite":
-        if tflite_container.status == "exited":
-            tflite_container.start()
-            logging.info("tflite container started.")
-        elif tflite_container.status == "running":
-            logging.info("tflite container is already running.")
-        
-    elif model_name == "onnx":
-        if onnx_model_container.status == "exited":
-            onnx_model_container.start()
-            logging.info("onnx_model container started.")
-        elif onnx_model_container.status == "running":
-            logging.info("onnx_model container is already running.")  
+    try:
+        # Always get the latest container object
+        container = client.containers.get(model_name)
+        container.reload()  # Refresh the container's state
+
+        # Handle the container based on its status
+        if container.status == "exited":
+            container.start()
+            logging.info(f"{model_name} container started.")
+        elif container.status == "running":
+            logging.info(f"{model_name} container is already running.")
+        else:
+            logging.warning(f"{model_name} container status: {container.status}")
+
+    except docker.errors.NotFound:
+        logging.error(f"Container {model_name} not found.")
+        return web.json_response({"error": f"Container {model_name} not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error controlling container: {e}")
+        return web.json_response({"error": str(e)}, status=500)
         
     # Executes a command to retrieve the IP address of the Raspberry Pi's 'wlan0' interface
     result = subprocess.run(["ip", "addr", "show", "wlan0"], capture_output=True, text=True)
