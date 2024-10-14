@@ -19,9 +19,9 @@ containers = client.containers.list(all=True)
 tflite_container = next((c for c in containers if c.name == "tflite"), None) 
 tflite_container_counter = 0
 
-# another_model_container
-another_model_container = next((c for c in containers if c.name == "another_model"), None) 
-another_model_container_counter = 0
+# onnx_model_container
+onnx_model_container = next((c for c in containers if c.name == "onnx"), None)
+onnx_model_container_counter = 0
 
 
 ROOT = os.path.dirname(__file__)
@@ -31,23 +31,28 @@ ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 async def return_ip(request):
     data = await request.json()
     model_name = data.get("model")
-    logging.info(f"======== container status : {tflite_container.status} ========")
+    logging.info(f"======== Requested model: {model_name} ========")
     
-    # add logic to control selected continer based on the model name
-    if model_name == "tflite":
-        if tflite_container.status == "exited":
-            tflite_container.start()
-            logging.info("tflite container started.")
-        elif tflite_container.status == "running":
-            logging.info("tflite container is already running.")
-        
-    elif model_name == "another_model":
-        if another_model_container.status == "exited":
-            another_model_container.start()
-            logging.info("another_model container started.")
-        elif another_model_container.status == "running":
-            logging.info("another_model container is already running.")
-        
+    try:
+        # Always get the latest container object
+        container = client.containers.get(model_name)
+        container.reload()  # Refresh the container's state
+
+        # Handle the container based on its status
+        if container.status == "exited":
+            container.start()
+            logging.info(f"{model_name} container started.")
+        elif container.status == "running":
+            logging.info(f"{model_name} container is already running.")
+        else:
+            logging.warning(f"{model_name} container status: {container.status}")
+
+    except docker.errors.NotFound:
+        logging.error(f"Container {model_name} not found.")
+        return web.json_response({"error": f"Container {model_name} not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error controlling container: {e}")
+        return web.json_response({"error": str(e)}, status=500)
         
     # Executes a command to retrieve the IP address of the Raspberry Pi's 'wlan0' interface
     result = subprocess.run(["ip", "addr", "show", "wlan0"], capture_output=True, text=True)
@@ -71,7 +76,7 @@ async def return_containers(request):
     
     # Prepare the response data
     container_data = []
-    valid_containers = {"tflite", "another_model"}
+    valid_containers = {"tflite", "onnx"}
     for container in containers:
         if container.name in valid_containers:
             container_info = {
