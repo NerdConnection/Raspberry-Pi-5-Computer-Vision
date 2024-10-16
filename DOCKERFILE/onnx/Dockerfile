@@ -43,7 +43,7 @@ RUN mkdir -p src/ONNX_model/object_detection/
 
 RUN wget https://github.com/onnx/models/raw/refs/heads/main/validated/vision/object_detection_segmentation/tiny-yolov3/model/tiny-yolov3-11.onnx -O src/ONNX_model/object_detection/tiny-yolov3.onnx
 
-RUN wget https://github.com/onnx/models/raw/refs/heads/main/validated/vision/object_detection_segmentation/yolov3/model/yolov3-12-int8.onnx -O src/ONNX_model/object_detection/yolov3.onnx
+RUN wget https://github.com/onnx/models/raw/refs/heads/main/validated/vision/object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_12-int8.onnx -O src/ONNX_model/object_detection/ssd_mobilenet_v1_12-int8.onnx
 
 COPY src /app/src
 
