@@ -21,15 +21,15 @@ def draw_detection(draw, d, c, labels, font):
     left = max(0, np.floor(left + 0.5).astype('int32'))
     bottom = min(height, np.floor(bottom + 0.5).astype('int32'))
     right = min(width, np.floor(right + 0.5).astype('int32'))
-
+    
     label = labels[c]
     label_size = draw.textsize(label, font=font)
-
+    
     if top - label_size[1] >= 0:
         text_origin = tuple(np.array([left, top - label_size[1]]))
     else:
         text_origin = tuple(np.array([left, top + 1]))
-
+    
     color = ImageColor.getrgb("red")
     thickness = 0
     draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness],
@@ -40,7 +40,7 @@ def transform_onnx(image, session, labels, min_conf_threshold=0.5):
     # Convert image to RGB using PIL
     image_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(image_pil)
-
+    
     # Load a font, you can change the font file path as needed
     font = ImageFont.load_default()
 
@@ -69,7 +69,7 @@ def transform_onnx(image, session, labels, min_conf_threshold=0.5):
 
         for detection in range(0, num_detect):
             score = detection_scores[batch][detection]
-
+            
             if score > min_conf_threshold:
                 c = int(detection_classes[batch][detection])
                 d = detection_boxes[batch][detection]

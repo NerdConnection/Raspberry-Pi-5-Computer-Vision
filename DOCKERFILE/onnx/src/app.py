@@ -38,7 +38,7 @@ if labels[0] == '???':
 
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
-
+    
     def __init__(self, transform):
         super().__init__()
         self.transform = transform
@@ -75,16 +75,14 @@ async def on_connectionstatechange(pc_id, pc, model):
         logging.error(f"Connection {pc_id} failed. Closing connection.")
         await pc.close()
         pcs.pop(pc_id, None)
-
+        
     elif pc.connectionState == "closed":
         logging.info(f"Connection {pc_id} closed. Removing from pcs.")
         pcs.pop(pc_id, None)
 
     elif pc.connectionState == "connecting":
         logging.info("connecting container 'onnx'")
-        
-        
-        
+
 async def webrtc(request):
     logging.info("Received WebRTC request")
     try:
@@ -94,11 +92,11 @@ async def webrtc(request):
             pc_id = f"PeerConnection({uuid.uuid4()})"
             pcs[pc_id] = pc
             pc.on("connectionstatechange")(lambda: asyncio.create_task(on_connectionstatechange(pc_id, pc, params["video_transform"])))
-
+            
             cam_track = PiCameraTrack(transform=params["video_transform"])
             relay.subscribe(cam_track)
             pc.addTrack(cam_track)
-
+            
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
 
@@ -149,10 +147,10 @@ async def return_ip(request):
             break
     else:
         ip_address = None
-
+        
     logging.info(f"======== wlan0 IP: {ip_address} ========")
     return web.json_response({"ip": ip_address})
-
+    
 async def index(request):
     content = open(os.path.join(ROOT_TEMPLATES, "index.html"), "r").read()
     return web.Response(content_type="text/html", text=content)
@@ -164,7 +162,7 @@ async def javascript(request):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Raspberry Pi WebRTC Camera Streamer")
     parser.add_argument("--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=81, help="Port for HTTP server (default: 8080)")
+    parser.add_argument("--port", type=int, default=80, help="Port for HTTP server (default: 8080)")
     parser.add_argument("--verbose", "-v", action="count")
 
     args = parser.parse_args()

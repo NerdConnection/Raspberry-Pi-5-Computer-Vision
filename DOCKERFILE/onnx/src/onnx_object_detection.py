@@ -11,7 +11,7 @@ def load_model(model_dir, model_name):
     model_path = os.path.join(model_dir, model_name)
     session = ort.InferenceSession(model_path)
     return session
-
+        
 def transform_onnx(image, session, labels, min_conf_threshold=0.5):
     # Convert image to RGB
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -39,14 +39,14 @@ def transform_onnx(image, session, labels, min_conf_threshold=0.5):
 
     # Run inference on the ONNX model
     outputs = session.run(None, {input_name: input_data, image_shape_name: image_shape})
-
+    
     # Postprocess outputs
     boxes = []
     confidences = []
     class_ids = []
-
+    
     detected_objects = []  
-
+    
     for detection in outputs[0][0]:
         scores = detection[5:]
         if scores.size == 0:
@@ -54,10 +54,10 @@ def transform_onnx(image, session, labels, min_conf_threshold=0.5):
         else :
             logging.info("fuck")
 
-
+        
         class_id = np.argmax(scores)
         confidence = scores[class_id]
-
+        
         if confidence > min_conf_threshold:  
             box = detection[0:4] * np.array([imW, imH, imW, imH])
             (center_x, center_y, width, height) = box.astype("int")
@@ -66,16 +66,16 @@ def transform_onnx(image, session, labels, min_conf_threshold=0.5):
             boxes.append([x, y, int(width), int(height)])
             confidences.append(float(confidence))
             class_ids.append(class_id)
-
+            
             detected_objects.append((labels[class_id], confidence))
-
+    
     if detected_objects:
         logging.info(f"Detected {len(detected_objects)} objects:")
         for obj_name, conf in detected_objects:
             logging.info(f"Object: {obj_name}, Confidence: {conf:.2f}")
     else:
         logging.info("No objects detected.")
-
+            
     for (box, confidence, class_id) in zip(boxes, confidences, class_ids):
         (x, y, w, h) = box
         color = (0, 255, 0)  # Green for box

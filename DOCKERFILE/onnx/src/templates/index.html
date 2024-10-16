@@ -42,32 +42,5 @@
         <video id="video" autoplay="true" playsinline="true"></video>
     </div>
 <script src="client.js"></script>
-    <script>
-        const video = document.getElementById('video');
-        const fpsDisplay = document.getElementById('fps-value');
-        let frameCount = 0;
-        let lastTime = performance.now();
-
-        // FPS calc Func
-        function calculateFPS() {
-            const currentTime = performance.now();
-            frameCount++;
-
-            if (currentTime - lastTime >= 1000) { // Update FPS every 1 second
-                fpsDisplay.textContent = frameCount;
-                frameCount = 0;
-                lastTime = currentTime;
-            }
-
-            requestAnimationFrame(calculateFPS); // Call it again in the next frame
-        }
-
-        // Start calculating FPS when the video starts
-        video.addEventListener('playing', () => {
-            frameCount = 0; // Resetting the frame count          
-            lastTime = performance.now(); // Reset to current time
-            calculateFPS(); // Start calculating FPS
-        });
-    </script>
 </body>
 </html>
