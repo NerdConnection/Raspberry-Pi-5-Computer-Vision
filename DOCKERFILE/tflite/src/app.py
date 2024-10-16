@@ -52,7 +52,7 @@ class PiCameraTrack(MediaStreamTrack):
     async def recv(self):
         img = cam.capture_array()
 
-        if self.transform == "tfLite": ###### NEED TO CHANGE TO MODEL NAME (OBJECT DETECTION)
+        if self.transform == "efficientdet": 
             # Load the TensorFlow Lite model
             interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 
@@ -64,7 +64,7 @@ class PiCameraTrack(MediaStreamTrack):
                 processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
             new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-        else:
+        elif self.transform == "ssd-mobilenet-v1":
             # Load the TensorFlow Lite model
             interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
 

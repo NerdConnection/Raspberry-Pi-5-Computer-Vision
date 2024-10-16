@@ -13,7 +13,9 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
-import onnx_object_detection
+import onnx_yolo_object_detection
+import onnx_ssd_object_detection
+
 import subprocess
 
 ROOT = os.path.dirname(__file__)
@@ -48,16 +50,16 @@ class PiCameraTrack(MediaStreamTrack):
         img = cam.capture_array() #data type : uint8 / image shape(height, width, 3RGB)
 
         if self.transform == "tiny-yolov3": 
-            session = onnx_object_detection.load_model(OBJECT_MODEL_DIR, 'tiny-yolov3.onnx')
-            processed_image = onnx_object_detection.transform_onnx(img, session, labels)
+            session = onnx_yolo_object_detection.load_model(OBJECT_MODEL_DIR, 'tiny-yolov3.onnx')
+            processed_image = onnx_yolo_object_detection.transform_onnx(img, session, labels)
 
             if processed_image.shape[2] == 4:
                 processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
             new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-        if self.transform == "yolov3": 
-            session = onnx_object_detection.load_model(OBJECT_MODEL_DIR, 'yolov3.onnx')
-            processed_image = onnx_object_detection.transform_onnx(img, session, labels)
+        if self.transform == "ssd_mobilenet_v1_12-int8": 
+            session = onnx_ssd_object_detection.load_model(OBJECT_MODEL_DIR, 'ssd_mobilenet_v1_12-int8.onnx')
+            processed_image = onnx_ssd_object_detection.transform_onnx(img, session, labels)
 
             if processed_image.shape[2] == 4:
                 processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
