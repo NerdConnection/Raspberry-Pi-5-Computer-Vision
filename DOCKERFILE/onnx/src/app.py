@@ -25,9 +25,7 @@ ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 cam = Picamera2()
 cam.configure(cam.create_video_configuration())
 cam.start()
-
 pcs = {}
-relay = MediaRelay()
 
 
 OBJECT_MODEL_DIR = "src/ONNX_model/object_detection/"
@@ -43,49 +41,68 @@ class PiCameraTrack(MediaStreamTrack):
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform
-        self.cam = None
+        self.transform = transform  # model selected by user
+
+        # Load the appropriate model and labels based on user selection
+        if self.transform == "tiny-yolov3":
+            self.model_name = "tiny-yolov3.onnx"
+            self.session = onnx_yolo_object_detection.load_model(OBJECT_MODEL_DIR, "tiny-yolov3.onnx")
+        elif self.transform == "ssd_mobilenet_v1_12-int8":
+            self.model_name = 'ssd_mobilenet_v1_12-int8.onnx'
+            self.session = onnx_ssd_object_detection.load_model(OBJECT_MODEL_DIR, "ssd_mobilenet_v1_12-int8.onnx")
+        else:
+            raise ValueError(f"Unsupported model type: {self.transform}")
 
     async def recv(self):
-        img = cam.capture_array() #data type : uint8 / image shape(height, width, 3RGB)
+        img = cam.capture_array()
 
-        if self.transform == "tiny-yolov3": 
-            session = onnx_yolo_object_detection.load_model(OBJECT_MODEL_DIR, 'tiny-yolov3.onnx')
-            processed_image = onnx_yolo_object_detection.transform_onnx(img, session, labels)
+        if self.transform == "tiny-yolov3":
+            processed_image = onnx_yolo_object_detection.transform_onnx(img, self.session, labels)
+        elif self.transform == "ssd_mobilenet_v1_12-int8":
+            processed_image = onnx_ssd_object_detection.transform_onnx(img, self.session, labels)
 
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
+        # Convert image to RGB format if it is in RGBA
+        if processed_image.shape[2] == 4:
+            processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-        if self.transform == "ssd_mobilenet_v1_12-int8": 
-            session = onnx_ssd_object_detection.load_model(OBJECT_MODEL_DIR, 'ssd_mobilenet_v1_12-int8.onnx')
-            processed_image = onnx_ssd_object_detection.transform_onnx(img, session, labels)
+        # Create a new VideoFrame
+        new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
 
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
-
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-
+        # Set PTS (Presentation Time Stamp) for frame synchronization
         pts = time.time() * 1000000
         new_frame.pts = int(pts)
         new_frame.time_base = Fraction(1, 1000000)
+
         return new_frame
 
 async def on_connectionstatechange(pc_id, pc, model):
     logging.info(f"Connection state for {pc_id} is {pc.connectionState}")
     if pc.connectionState == "failed":
         logging.error(f"Connection {pc_id} failed. Closing connection.")
+        
+        for sender in pc.getSenders():
+            if sender.track:
+                sender.track.stop()
+
+        await pc.close()
+        pcs.pop(pc_id, None)
+        
+    elif pc.connectionState == "closed":
+        logging.info(f"Connection {pc_id} closed. Removing from pcs.")
+
+        for sender in pc.getSenders():
+            if sender.track:
+                sender.track.stop()
+
         await pc.close()
         pcs.pop(pc_id, None)
 
-    elif pc.connectionState == "closed":
-        logging.info(f"Connection {pc_id} closed. Removing from pcs.")
-        pcs.pop(pc_id, None)
-
     elif pc.connectionState == "connecting":
-        logging.info("connecting container 'onnx'")
+        logging.info("connecting container 'tflite'")
         
         
+efficientdet_track = PiCameraTrack(transform="tiny-yolov3")
+mobilenet_track = PiCameraTrack(transform="ssd_mobilenet_v1_12-int8")
         
 async def webrtc(request):
     logging.info("Received WebRTC request")
@@ -97,9 +114,10 @@ async def webrtc(request):
             pcs[pc_id] = pc
             pc.on("connectionstatechange")(lambda: asyncio.create_task(on_connectionstatechange(pc_id, pc, params["video_transform"])))
 
-            cam_track = PiCameraTrack(transform=params["video_transform"])
-            relay.subscribe(cam_track)
-            pc.addTrack(cam_track)
+            if params["video_transform"] == "tiny-yolov3":
+                pc.addTrack(efficientdet_track)
+            elif params["video_transform"] == "ssd_mobilenet_v1_12-int8":
+                pc.addTrack(mobilenet_track)
 
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)

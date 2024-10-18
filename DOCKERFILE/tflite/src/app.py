@@ -24,9 +24,7 @@ ROOT_TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 cam = Picamera2()
 cam.configure(cam.create_video_configuration())
 cam.start()
-
 pcs = {}
-relay = MediaRelay()
 
 # TensorFlow Lite model and label map initialization
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
@@ -41,45 +39,42 @@ if labels[0] == '???':
 
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
-    
 
     def __init__(self, transform):
         super().__init__()
         self.transform = transform  # model selected by user
-        self.cam = None
 
-    # Recv function to create frames added to video track
+        # Load the appropriate model and labels based on user selection
+        if self.transform == "efficientdet":
+            self.model_name = 'efficientdet.tflite'
+        elif self.transform == "ssd-mobilenet-v1":
+            self.model_name = 'ssd-mobilenet-v1.tflite'
+        else:
+            raise ValueError(f"Unsupported model type: {self.transform}")
+        # Load the TensorFlow Lite model once during initialization
+        self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR, self.model_name)
+
+
     async def recv(self):
         img = cam.capture_array()
 
-        if self.transform == "efficientdet": 
-            # Load the TensorFlow Lite model
-            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'efficientdet.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
+        # Transform the image using the TensorFlow Lite model
+        processed_image = tflite_object_detection.transform_tflite(
+            img, self.interpreter, self.input_details, self.output_details, labels
+        )
 
-            # Transform the image using the TensorFlow Lite model
-            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
+        # Convert image to RGB format if it is in RGBA
+        if processed_image.shape[2] == 4:
+            processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
-            # Convert image to RGB format if it is in RGBA
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
+        # Create a new VideoFrame
+        new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
 
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-        elif self.transform == "ssd-mobilenet-v1":
-            # Load the TensorFlow Lite model
-            interpreter, input_details, output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR,'ssd-mobilenet-v1.tflite') ####### CHANGE 'MODEL NAME' WITH EXTRA [ELIF] TO SELECT ONTHER OBJECT DETECTION MODEL 
-
-            # Transform the image using the TensorFlow Lite model
-            processed_image = tflite_object_detection.transform_tflite(img, interpreter, input_details, output_details, labels)
-
-            # Convert image to RGB format if it is in RGBA
-            if processed_image.shape[2] == 4:
-                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
-
-            new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-
+        # Set PTS (Presentation Time Stamp) for frame synchronization
         pts = time.time() * 1000000
         new_frame.pts = int(pts)
         new_frame.time_base = Fraction(1, 1000000)
+
         return new_frame
 
 
@@ -87,16 +82,30 @@ async def on_connectionstatechange(pc_id, pc, model):
     logging.info(f"Connection state for {pc_id} is {pc.connectionState}")
     if pc.connectionState == "failed":
         logging.error(f"Connection {pc_id} failed. Closing connection.")
+        
+        for sender in pc.getSenders():
+            if sender.track:
+                sender.track.stop()
+        
         await pc.close()
         pcs.pop(pc_id, None)
         
     elif pc.connectionState == "closed":
         logging.info(f"Connection {pc_id} closed. Removing from pcs.")
+
+        for sender in pc.getSenders():
+            if sender.track:
+                sender.track.stop()
+
+        await pc.close()
         pcs.pop(pc_id, None)
 
     elif pc.connectionState == "connecting":
         logging.info("connecting container 'tflite'")
                 
+
+efficientdet_track = PiCameraTrack(transform="efficientdet")
+mobilenet_track = PiCameraTrack(transform="ssd-mobilenet-v1")
 
 async def webrtc(request):
     logging.info("Received WebRTC request")
@@ -108,9 +117,10 @@ async def webrtc(request):
             pcs[pc_id] = pc
             pc.on("connectionstatechange")(lambda: asyncio.create_task(on_connectionstatechange(pc_id, pc, params["video_transform"])))
             
-            cam_track = PiCameraTrack(transform=params["video_transform"])
-            relay.subscribe(cam_track)
-            pc.addTrack(cam_track)
+            if params["video_transform"] == "efficientdet":
+                pc.addTrack(efficientdet_track)
+            elif params["video_transform"] == "ssd-mobilenet-v1":
+                pc.addTrack(mobilenet_track)
             
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
