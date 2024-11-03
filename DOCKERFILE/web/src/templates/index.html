@@ -1,57 +1,112 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC webcam</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC - Raspberry Pi</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #00509e;
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        h2 {
+            color: #0074cc;
+            font-size: 1.5rem;
+            margin-bottom: 12px;
         }
 
         button {
-            padding: 8px 16px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background-color: #00509e;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
         }
 
-        video {
-            width: 100%;
+        button:hover {
+            background-color: #0074cc;
         }
 
-        .option {
-            margin-bottom: 8px;
-        }
-
-        #media {
-            max-width: 1280px;
-        }
-
-        /* Grid styles for containers */
         #containerList {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Adjusts to fill space */
-            gap: 16px; /* Spacing between items */
-            margin-top: 16px; /* Space above the container list */
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 16px;
         }
 
         .container {
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 8px;
-            background-color: #f9f9f9;
-            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+            background-color: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
         }
 
-        .container span {
-            display: block; /* Make status text a block for better separation */
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        .container h3 {
+            font-size: 1.25rem;
             margin-bottom: 8px;
+            color: #333;
+        }
+
+        .container .status {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        .container .status.running {
+            color: #28a745;
+        }
+
+        .container .status.stopped {
+            color: #dc3545;
+        }
+        .status {
+            font-size: 1rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .status.running {
+            color: #28a745; 
+        }
+
+        .status.stopped {
+            color: #dc3545; 
         }
     </style>
 </head>
 <body>
-    <h1>WebRTC- Raspberry pi</h1>
+    <h1>WebRTC - Raspberry Pi</h1>
     <h2>Container States</h2>
-    <button onclick="checkContainers()">Check current container status</button>
-    <div id="containerList"></div>
+    <button onclick="checkContainers()">Check Current Container Status</button>
+
+    <div id="containerList">
+    </div>
 
     <script src="client.js"></script>
 </body>

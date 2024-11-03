@@ -80,63 +80,40 @@ async function stopContainer(containerName) {
 
 function displayContainers(containers) {
     const containerList = document.getElementById('containerList');
-    containerList.innerHTML = ''; // Clear previous list
+    containerList.innerHTML = ''; 
 
-    let runningContainer = null;
-    // Check if any container is running
     containers.forEach(container => {
-    if (container.status === 'running') {
-        runningContainer = container;
-        }
-    });
+        const containerDiv = document.createElement('div');
+        containerDiv.classList.add('container');
 
-    if (runningContainer) {
-        containers.forEach(container => {
-            const containerDiv = document.createElement('div');
-            containerDiv.classList.add('container');
-    
-            const stateText = document.createElement('span');
-            stateText.textContent = `${container.name} - ${container.status}`;
-            containerDiv.appendChild(stateText);
-    
-            if (container.status === 'running') {
-                // "Move" button to navigate to the container's web page
-                const moveButton = document.createElement('button');
-                moveButton.textContent = 'Move to ' + container.name;
-                moveButton.onclick = () => {
-                    move(container.name)
-                };
-    
-                // "Stop" button to stop the running container
-                const stopButton = document.createElement('button');
-                stopButton.textContent = 'Stop ' + container.name;
-                stopButton.onclick = async () => {
-                    await stopContainer(container.name); // Call stopContainer to stop the container
-                    checkContainers(); // Refresh the container list after stopping
-                };
-    
-                containerDiv.appendChild(stopButton);
-                containerDiv.appendChild(moveButton);
-            }
-            containerList.appendChild(containerDiv);
-        });
-    }
-    else {
-        containers.forEach(container => {
-            const containerDiv = document.createElement('div');
-            containerDiv.classList.add('container');
-
-            const stateText = document.createElement('span');
-            stateText.textContent = `${container.name} - ${container.status}`;
-            containerDiv.appendChild(stateText);
+        const stateText = document.createElement('span');
+        stateText.textContent = `${container.name} - ${container.status}`;
         
+        stateText.classList.add('status');
+        stateText.classList.add(container.status);
+        
+        containerDiv.appendChild(stateText);
+
+        if (container.status === 'running') {
+            const moveButton = document.createElement('button');
+            moveButton.textContent = 'Move to ' + container.name;
+            moveButton.onclick = () => move(container.name);
+
+            const stopButton = document.createElement('button');
+            stopButton.textContent = 'Stop ' + container.name;
+            stopButton.onclick = async () => {
+                await stopContainer(container.name);
+                checkContainers();
+            };
+
+            containerDiv.appendChild(stopButton);
+            containerDiv.appendChild(moveButton);
+        } else {
             const button = document.createElement('button');
             button.textContent = 'Move to ' + container.name;
-            button.onclick = () => {
-                move(container.name)
-            };
+            button.onclick = () => move(container.name);
             containerDiv.appendChild(button);
-            containerList.appendChild(containerDiv);
-        });
-    }
+        }
+        containerList.appendChild(containerDiv);
+    });
 }
