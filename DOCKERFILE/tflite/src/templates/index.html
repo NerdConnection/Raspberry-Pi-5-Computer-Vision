@@ -1,72 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC webcam</title>
+    <title>WebRTC Webcam Control Panel</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+        
+        h1, h2 {
+            color: #0056b3;
+        }
+
         button {
-            padding: 8px 16px;
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #media, .option {
+            max-width: 1280px;
+            width: 100%;
+            margin: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
 
         video {
             width: 100%;
+            border-radius: 8px;
         }
 
-        .option {
-            margin-bottom: 8px;
+        .option select {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 50%;
         }
 
-        #media {
-            max-width: 1280px;
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>WebRTC- Raspberry pi</h1>
-    <h2>Options</h2>
+    <h1>Raspberry Pi WebRTC Control Panel</h1>
+
     <div class="option">
+        <h2>Select Model</h2>
         <select id="video-transform">
-            <option value="efficientdet" selected>efficientdet</option>
-            <option value="ssd-mobilenet-v1">ssd-mobilenet-v1</option>
+            <option value="efficientdet" selected>EfficientDet</option>
+            <option value="ssd-mobilenet-v1">SSD MobileNet V1</option>
         </select>
     </div>
 
-    <button id="start" onclick="start()">Start</button>
-    <button id="back_to_home" onclick="back_to_home()">back to home</button>
+    <div id="controls">
+        <button id="start" onclick="start()">Start Streaming</button>
+        <button id="back_to_home" onclick="back_to_home()">Back to Home</button>
+    </div>
 
     <div id="media">
-        <h2>Media</h2>
-
+        <h2>Live Video Stream</h2>
         <audio id="audio" autoplay="true"></audio>
         <video id="video" autoplay="true" playsinline="true"></video>
+        <div id="fps-value" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
-<script src="client.js"></script>
+
+    <script src="client.js"></script>
     <script>
         const video = document.getElementById('video');
         const fpsDisplay = document.getElementById('fps-value');
         let frameCount = 0;
         let lastTime = performance.now();
 
-        // FPS calc Func
+        
         function calculateFPS() {
             const currentTime = performance.now();
             frameCount++;
 
-            if (currentTime - lastTime >= 1000) { // Update FPS every 1 second
-                fpsDisplay.textContent = frameCount;
+            if (currentTime - lastTime >= 1000) { 
+                fpsDisplay.textContent = `FPS: ${frameCount}`;
                 frameCount = 0;
                 lastTime = currentTime;
             }
-
-            requestAnimationFrame(calculateFPS); // Call it again in the next frame
+            requestAnimationFrame(calculateFPS);
         }
 
-        // Start calculating FPS when the video starts
+        
         video.addEventListener('playing', () => {
-            frameCount = 0; // Resetting the frame count          
-            lastTime = performance.now(); // Reset to current time
-            calculateFPS(); // Start calculating FPS
+            frameCount = 0;
+            lastTime = performance.now();
+            calculateFPS();
         });
     </script>
 </body>
