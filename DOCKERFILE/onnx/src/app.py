@@ -42,8 +42,9 @@ class PiCameraTrack(MediaStreamTrack):
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform  # 모델 선택에 따른 초기화
-
+        self.transform = transform  # model selected by user
+        
+         # Load the appropriate model and labels based on user selection
         if self.transform == "tiny-yolov3":
             self.model_name = "tiny-yolov3.onnx"
             self.session = onnx_yolo_object_detection.load_model(OBJECT_MODEL_DIR, "tiny-yolov3.onnx")
@@ -61,14 +62,20 @@ class PiCameraTrack(MediaStreamTrack):
         elif self.transform == "ssd_mobilenet_v1_12-int8":
             processed_image = onnx_ssd_object_detection.transform_onnx(img, self.session, labels)
 
+        # Convert image to RGB format if it is in RGBA
         if processed_image.shape[2] == 4:
             processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
+        # Create a new VideoFrame
         new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
-        new_frame.pts = int(time.time() * 1000000)
+
+        # Set PTS (Presentation Time Stamp) for frame synchronization
+        pts = time.time() * 1000000
+        new_frame.pts = int(pts)
         new_frame.time_base = Fraction(1, 1000000)
 
         return new_frame
+        
 # CPU 온도를 가져오는 함수
 def get_cpu_temperature():
     try:
