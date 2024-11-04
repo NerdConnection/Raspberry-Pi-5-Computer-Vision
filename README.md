@@ -1,11 +1,11 @@
 # Computer-Vision-Suite for Raspberry Pi 5 
 
 > **동아대학교** <br/>
-**개발기간: 2022.03 ~ 2022.10** <br/>
+**개발기간: 2024.03 ~ 2024.10** <br/>
 **개발인원: 4명** <br/>
 
 > **Dong-A University** <br>
-**Development Period: March 2022 - October 2022** <br>
+**Development Period: March 2024 - October 2024** <br>
 **Team Size: 4 Developers**
 
 
