@@ -94,6 +94,47 @@ async function back_to_home() {
         console.error('Unable to retrieve IP address');
     }
 }
+const video = document.getElementById('video');
+const fpsDisplay = document.getElementById('fpsDisplay');
+let frameCount = 0;
+let lastTime = performance.now();
+        // FPS 계산 함수
+function calculateFPS() {
+    const currentTime = performance.now();
+    frameCount++;
+
+    // 매초 FPS 업데이트
+    if (currentTime - lastTime >= 1000) {
+        fpsDisplay.textContent = frameCount;
+        frameCount = 0;
+        lastTime = currentTime;
+    }   
+
+    requestAnimationFrame(calculateFPS);
+    }
+
+    // 비디오가 재생될 때 FPS 계산 시작
+    video.addEventListener('playing', () => {
+    frameCount = 0;
+    lastTime = performance.now();
+    calculateFPS();
+});
+
+        // 시스템 리소스 정보를 주기적으로 업데이트
+async function updateSystemResources() {
+    try {
+        const response = await fetch('/system_resources');
+        const data = await response.json();
+        document.getElementById('cpu-temp').innerText = `CPU Temperature: ${data.cpu_temp.toFixed(1)} °C`;
+        document.getElementById('memory-info').innerText = `Memory Usage: ${((data.memory_used / data.memory_total) * 100).toFixed(2)}% (${(data.memory_used / (1024**2)).toFixed(1)} MB / ${(data.memory_total / (1024**2)).toFixed(1)} MB)`;
+        } 
+        catch (error) {
+            console.error("Failed to fetch system resources:", error);
+        }
+    }
+
+        // 5초마다 시스템 리소스 업데이트
+setInterval(updateSystemResources, 5000);
 
 // Remove connection when the client closes the window
 window.addEventListener('beforeunload', (event) => {
