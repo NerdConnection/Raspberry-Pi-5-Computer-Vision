@@ -16,6 +16,7 @@ from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
 import tflite_object_detection
 import subprocess
+import psutil  # 시스템 리소스 확인을 위한 psutil 모듈
 
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -26,11 +27,11 @@ cam.configure(cam.create_video_configuration())
 cam.start()
 pcs = {}
 
-# TensorFlow Lite model and label map initialization
+# TensorFlow Lite 모델 및 레이블 맵 초기화
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
-LABELMAP_NAME = "labels.txt" # using coco dataset label 2017
+LABELMAP_NAME = "labels.txt"  # COCO 데이터셋의 레이블 사용
 
-# Load the label map
+# 레이블 맵 로드
 with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
     labels = [line.strip() for line in f.readlines()]
 if labels[0] == '???':
@@ -42,35 +43,35 @@ class PiCameraTrack(MediaStreamTrack):
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform  # model selected by user
+        self.transform = transform  # 사용자 선택 모델
 
-        # Load the appropriate model and labels based on user selection
+        # 사용자가 선택한 모델 및 레이블 로드
         if self.transform == "efficientdet":
             self.model_name = 'efficientdet.tflite'
         elif self.transform == "ssd-mobilenet-v1":
             self.model_name = 'ssd-mobilenet-v1.tflite'
         else:
             raise ValueError(f"Unsupported model type: {self.transform}")
-        # Load the TensorFlow Lite model once during initialization
+        
+        # TensorFlow Lite 모델을 초기화 시에 로드
         self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR, self.model_name)
-
 
     async def recv(self):
         img = cam.capture_array()
 
-        # Transform the image using the TensorFlow Lite model
+        # TensorFlow Lite 모델로 이미지 변환
         processed_image = tflite_object_detection.transform_tflite(
             img, self.interpreter, self.input_details, self.output_details, labels
         )
 
-        # Convert image to RGB format if it is in RGBA
+        # 이미지가 RGBA 형식인 경우 RGB로 변환
         if processed_image.shape[2] == 4:
             processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
-        # Create a new VideoFrame
+        # 새 VideoFrame 생성
         new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
 
-        # Set PTS (Presentation Time Stamp) for frame synchronization
+        # PTS(Presentation Time Stamp) 설정
         pts = time.time() * 1000000
         new_frame.pts = int(pts)
         new_frame.time_base = Fraction(1, 1000000)
@@ -125,7 +126,7 @@ async def webrtc(request):
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
 
-            await asyncio.sleep(0)  # Allow other tasks to run
+            await asyncio.sleep(0)  # 다른 작업을 위해 대기
 
             while pc.iceGatheringState != "complete":
                 await asyncio.sleep(0.1)
@@ -163,10 +164,31 @@ async def on_shutdown(app):
     await asyncio.gather(*coros)
     pcs.clear()
 
+# CPU 온도 가져오는 함수
+def get_cpu_temperature():
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+            temp = float(f.read()) / 1000.0  # 섭씨로 변환
+        return temp
+    except Exception as e:
+        logging.error(f"Error reading CPU temperature: {e}")
+        return None
+
+# 시스템 리소스를 반환하는 엔드포인트
+async def get_system_resources(request):
+    cpu_temp = get_cpu_temperature()
+    memory = psutil.virtual_memory()
+    resources = {
+        'cpu_temp': cpu_temp,
+        'memory_total': memory.total,
+        'memory_used': memory.used,
+        'memory_free': memory.free,
+    }
+    return web.json_response(resources)
 
 async def return_ip(request):
     data = await request.json()
-    # Executes a command to retrieve the IP address of the Raspberry Pi's 'wlan0' interface
+    # wlan0 인터페이스의 IP 주소 가져오기
     result = subprocess.run(["ip", "addr", "show", "wlan0"], capture_output=True, text=True)
     output = result.stdout
     for line in output.splitlines():
@@ -205,6 +227,6 @@ if __name__ == "__main__":
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/webrtc", webrtc)
     app.router.add_post("/get-ip", return_ip)
+    app.router.add_get("/system_resources", get_system_resources)  # 시스템 리소스 엔드포인트 추가
     logging.info(f"======== Running on http://{args.host}:{args.port} ========")
     web.run_app(app, host=args.host, port=args.port)
-
