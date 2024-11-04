@@ -29,7 +29,7 @@ pcs = {}
 
 # TensorFlow Lite model and label map initialization
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
-LABELMAP_NAME = "labels.txt"  # COCO 데이터셋의 레이블 사용
+LABELMAP_NAME = "labels.txt"  # using coco dataset label 2017
 
 # Load the label map
 with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
@@ -43,7 +43,7 @@ class PiCameraTrack(MediaStreamTrack):
 
     def __init__(self, transform):
         super().__init__()
-        self.transform = transform  # 사용자 선택 모델
+        self.transform = transform  # model selected by user
 
         # Load the appropriate model and labels based on user selection
         if self.transform == "efficientdet":
