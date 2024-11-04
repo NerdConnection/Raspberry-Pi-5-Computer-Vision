@@ -1,44 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC Webcam</title>
-    <style>
-        button { padding: 8px 16px; }
-        video { width: 100%; }
-        .option { margin-bottom: 8px; }
-        #media { max-width: 1280px; }
-        #system-info { margin-top: 20px; }
+    <title>WebRTC - Raspberry Pi Control Panel</title>
+    <style> 
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2 {
+            color: #0056b3;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #media, .option {
+            max-width: 1280px;
+            width: 100%;
+            margin: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .option select {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 50%;
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>WebRTC - Raspberry Pi</h1>
-    <h2>Options</h2>
+    
     <div class="option">
+        <h2>Options</h2>
         <select id="video-transform">
             <option value="tiny-yolov3" selected>tiny-yolov3</option>
             <option value="ssd_mobilenet_v1_12-int8">ssd_mobilenet_v1_12-int8</option>
         </select>
     </div>
 
-    <button id="start" onclick="start()">Start</button>
-    <button id="back_to_home" onclick="back_to_home()">Back to Home</button>
+    <div id="controls">
+        <button id="start" onclick="start()">Start Streaming</button>
+        <button id="back_to_home" onclick="back_to_home()">Back to Home</button>
+    </div>
 
     <div id="media">
         <h2>Media</h2>
         <audio id="audio" autoplay="true"></audio>
         <video id="video" autoplay="true" playsinline="true"></video>
-    </div>
-
-    <div id="system-info">
-        <h2>System Information</h2>
         <p id="cpu-temp">CPU Temperature: loading...</p>
         <p id="memory-info">Memory Usage: loading...</p>
-        <p>Frames per Second (FPS): <span id="fpsDisplay">0</span></p>
-        
+        <div id="fpsDisplay" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
 
-    <script src="client.js"></script>    
+    <script src="client.js"></script>
+    
 </body>
 </html>
