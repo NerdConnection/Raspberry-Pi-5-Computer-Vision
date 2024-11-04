@@ -27,11 +27,11 @@ cam.configure(cam.create_video_configuration())
 cam.start()
 pcs = {}
 
-# TensorFlow Lite 모델 및 레이블 맵 초기화
+# TensorFlow Lite model and label map initialization
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
 LABELMAP_NAME = "labels.txt"  # COCO 데이터셋의 레이블 사용
 
-# 레이블 맵 로드
+# Load the label map
 with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
     labels = [line.strip() for line in f.readlines()]
 if labels[0] == '???':
@@ -45,7 +45,7 @@ class PiCameraTrack(MediaStreamTrack):
         super().__init__()
         self.transform = transform  # 사용자 선택 모델
 
-        # 사용자가 선택한 모델 및 레이블 로드
+        # Load the appropriate model and labels based on user selection
         if self.transform == "efficientdet":
             self.model_name = 'efficientdet.tflite'
         elif self.transform == "ssd-mobilenet-v1":
@@ -53,25 +53,25 @@ class PiCameraTrack(MediaStreamTrack):
         else:
             raise ValueError(f"Unsupported model type: {self.transform}")
         
-        # TensorFlow Lite 모델을 초기화 시에 로드
+        # Load the TensorFlow Lite model once during initialization
         self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR, self.model_name)
 
     async def recv(self):
         img = cam.capture_array()
 
-        # TensorFlow Lite 모델로 이미지 변환
+        # Transform the image using the TensorFlow Lite model
         processed_image = tflite_object_detection.transform_tflite(
             img, self.interpreter, self.input_details, self.output_details, labels
         )
 
-        # 이미지가 RGBA 형식인 경우 RGB로 변환
+        # Convert image to RGB format if it is in RGBA
         if processed_image.shape[2] == 4:
             processed_image = cv2.cvtColor(processed_image, cv2.COLOR_RGBA2RGB)
 
-        # 새 VideoFrame 생성
+        # Create a new VideoFrame
         new_frame = av.VideoFrame.from_ndarray(processed_image, format='rgb24')
 
-        # PTS(Presentation Time Stamp) 설정
+        # Set PTS (Presentation Time Stamp) for frame synchronization
         pts = time.time() * 1000000
         new_frame.pts = int(pts)
         new_frame.time_base = Fraction(1, 1000000)
@@ -126,7 +126,7 @@ async def webrtc(request):
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
 
-            await asyncio.sleep(0)  # 다른 작업을 위해 대기
+            await asyncio.sleep(0)  # Allow other tasks to run
 
             while pc.iceGatheringState != "complete":
                 await asyncio.sleep(0.1)
@@ -188,7 +188,7 @@ async def get_system_resources(request):
 
 async def return_ip(request):
     data = await request.json()
-    # wlan0 인터페이스의 IP 주소 가져오기
+    # Executes a command to retrieve the IP address of the Raspberry Pi's 'wlan0' interface
     result = subprocess.run(["ip", "addr", "show", "wlan0"], capture_output=True, text=True)
     output = result.stdout
     for line in output.splitlines():
