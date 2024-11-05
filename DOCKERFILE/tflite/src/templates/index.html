@@ -86,35 +86,11 @@
         <h2>Live Video Stream</h2>
         <audio id="audio" autoplay="true"></audio>
         <video id="video" autoplay="true" playsinline="true"></video>
-        <div id="fps-value" style="margin-top: 10px; font-weight: bold;"></div>
+        <p id="cpu-temp">CPU Temperature: loading...</p>
+        <p id="memory-info">Memory Usage: loading...</p>
+        <div id="fpsDisplay" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
 
-    <script src="client.js"></script>
-    <script>
-        const video = document.getElementById('video');
-        const fpsDisplay = document.getElementById('fps-value');
-        let frameCount = 0;
-        let lastTime = performance.now();
-
-        
-        function calculateFPS() {
-            const currentTime = performance.now();
-            frameCount++;
-
-            if (currentTime - lastTime >= 1000) { 
-                fpsDisplay.textContent = `FPS: ${frameCount}`;
-                frameCount = 0;
-                lastTime = currentTime;
-            }
-            requestAnimationFrame(calculateFPS);
-        }
-
-        
-        video.addEventListener('playing', () => {
-            frameCount = 0;
-            lastTime = performance.now();
-            calculateFPS();
-        });
-    </script>
+    <script src="client.js"></script>    
 </body>
 </html>

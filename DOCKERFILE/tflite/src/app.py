@@ -16,6 +16,7 @@ from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
 import tflite_object_detection
 import subprocess
+import psutil  # 시스템 리소스 확인을 위한 psutil 모듈
 
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -28,7 +29,7 @@ pcs = {}
 
 # TensorFlow Lite model and label map initialization
 OBJECT_MODEL_DIR = "src/TFLite_model/object_detection/"
-LABELMAP_NAME = "labels.txt" # using coco dataset label 2017
+LABELMAP_NAME = "labels.txt"  # using coco dataset label 2017
 
 # Load the label map
 with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
@@ -51,9 +52,9 @@ class PiCameraTrack(MediaStreamTrack):
             self.model_name = 'ssd-mobilenet-v1.tflite'
         else:
             raise ValueError(f"Unsupported model type: {self.transform}")
+        
         # Load the TensorFlow Lite model once during initialization
         self.interpreter, self.input_details, self.output_details = tflite_object_detection.load_model(OBJECT_MODEL_DIR, self.model_name)
-
 
     async def recv(self):
         img = cam.capture_array()
@@ -163,6 +164,27 @@ async def on_shutdown(app):
     await asyncio.gather(*coros)
     pcs.clear()
 
+# CPU 온도 가져오는 함수
+def get_cpu_temperature():
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+            temp = float(f.read()) / 1000.0  # 섭씨로 변환
+        return temp
+    except Exception as e:
+        logging.error(f"Error reading CPU temperature: {e}")
+        return None
+
+# 시스템 리소스를 반환하는 엔드포인트
+async def get_system_resources(request):
+    cpu_temp = get_cpu_temperature()
+    memory = psutil.virtual_memory()
+    resources = {
+        'cpu_temp': cpu_temp,
+        'memory_total': memory.total,
+        'memory_used': memory.used,
+        'memory_free': memory.free,
+    }
+    return web.json_response(resources)
 
 async def return_ip(request):
     data = await request.json()
@@ -205,6 +227,6 @@ if __name__ == "__main__":
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/webrtc", webrtc)
     app.router.add_post("/get-ip", return_ip)
+    app.router.add_get("/system_resources", get_system_resources)  # 시스템 리소스 엔드포인트 추가
     logging.info(f"======== Running on http://{args.host}:{args.port} ========")
     web.run_app(app, host=args.host, port=args.port)
-

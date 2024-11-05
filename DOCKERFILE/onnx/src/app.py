@@ -15,8 +15,8 @@ from aiortc.contrib.media import MediaStreamTrack, MediaRelay
 import cv2
 import onnx_yolo_object_detection
 import onnx_ssd_object_detection
-
 import subprocess
+import psutil  # 시스템 리소스 정보를 가져오기 위한 psutil 모듈 추가
 
 ROOT = os.path.dirname(__file__)
 ROOT_STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -27,7 +27,6 @@ cam.configure(cam.create_video_configuration())
 cam.start()
 pcs = {}
 
-
 OBJECT_MODEL_DIR = "src/ONNX_model/object_detection/"
 LABELMAP_NAME = "labels.txt"
 
@@ -36,14 +35,16 @@ with open(os.path.join("src", LABELMAP_NAME), 'r') as f:
 if labels[0] == '???':
     del(labels[0])
 
+
+
 class PiCameraTrack(MediaStreamTrack):
     kind = "video"
 
     def __init__(self, transform):
         super().__init__()
         self.transform = transform  # model selected by user
-
-        # Load the appropriate model and labels based on user selection
+        
+         # Load the appropriate model and labels based on user selection
         if self.transform == "tiny-yolov3":
             self.model_name = "tiny-yolov3.onnx"
             self.session = onnx_yolo_object_detection.load_model(OBJECT_MODEL_DIR, "tiny-yolov3.onnx")
@@ -74,6 +75,27 @@ class PiCameraTrack(MediaStreamTrack):
         new_frame.time_base = Fraction(1, 1000000)
 
         return new_frame
+        
+# CPU 온도를 가져오는 함수
+def get_cpu_temperature():
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+            temp = float(f.read()) / 1000.0  # 온도를 섭씨로 변환
+        return temp
+    except Exception as e:
+        logging.error(f"Error reading CPU temperature: {e}")
+        return None
+# 시스템 리소스를 반환하는 엔드포인트
+async def get_system_resources(request):
+    cpu_temp = get_cpu_temperature()
+    memory = psutil.virtual_memory()
+    resources = {
+        'cpu_temp': cpu_temp,
+        'memory_total': memory.total,
+        'memory_used': memory.used,
+        'memory_free': memory.free,
+    }
+    return web.json_response(resources)
 
 async def on_connectionstatechange(pc_id, pc, model):
     logging.info(f"Connection state for {pc_id} is {pc.connectionState}")
@@ -99,11 +121,10 @@ async def on_connectionstatechange(pc_id, pc, model):
 
     elif pc.connectionState == "connecting":
         logging.info("connecting container 'tflite'")
-        
-        
+
 efficientdet_track = PiCameraTrack(transform="tiny-yolov3")
 mobilenet_track = PiCameraTrack(transform="ssd_mobilenet_v1_12-int8")
-        
+
 async def webrtc(request):
     logging.info("Received WebRTC request")
     try:
@@ -197,5 +218,6 @@ if __name__ == "__main__":
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/webrtc", webrtc)
     app.router.add_post("/get-ip", return_ip)
+    app.router.add_get("/system_resources", get_system_resources)  # 시스템 리소스 엔드포인트 추가
     logging.info(f"======== Running on http://{args.host}:{args.port} ========")
     web.run_app(app, host=args.host, port=args.port)
