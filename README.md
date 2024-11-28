@@ -1,5 +1,6 @@
 # Computer-Vision-Suite for Raspberry Pi 5 
-
+![2-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/5bbe3521-ca93-496d-a6d8-8f5e19e8ba5f)
+![1-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/1e3ee026-490c-4721-84cb-33ea122af0f3)
 > **동아대학교** <br/>
 **개발기간: 2022.03 ~ 2022.10** <br/>
 **개발인원: 4명** <br/>
@@ -90,12 +91,9 @@ docker-compose up --build
 
 
 ## 화면 구성 📺
-
+<img width="728" alt="1" src="https://github.com/user-attachments/assets/d6a1a352-5a6d-417d-bffa-140589a66ce1">
+<img width="728" alt="KakaoTalk_20241104_215008547" src="https://github.com/user-attachments/assets/c7572658-f6a8-4a53-bd24-028ae6724426">
 ---
-## 주요 기능 📦
-
----
-## 아키텍쳐
 
 ### Directory Structure
 ```bash
